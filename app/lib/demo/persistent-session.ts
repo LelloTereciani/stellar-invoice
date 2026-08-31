@@ -24,3 +24,8 @@ export async function consumePersistentDemoSession(token: string) {
   if (error || !data) throw new Error("Demo session is invalid or expired");
   return data.customer_public_key as string;
 }
+
+export async function recordDemoDistribution(customerPublicKey: string, transactionHash: string) {
+  const { error } = await database().from("demo_distributions").insert({ customer_public_key: customerPublicKey, transaction_hash: transactionHash });
+  if (error) throw new Error("Demo wallet has already received its BRLT allowance");
+}

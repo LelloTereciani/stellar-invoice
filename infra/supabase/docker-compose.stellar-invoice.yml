@@ -17,3 +17,4 @@ services:
       - ../../supabase/migrations/0002_policies.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0002.sql:ro,Z
       - ../../supabase/migrations/0003_confirm_invoice_hardening.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0003.sql:ro,Z
       - ../../supabase/migrations/0004_demo_sessions.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0004.sql:ro,Z
+      - ../../supabase/migrations/0005_demo_distributions.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0005.sql:ro,Z
