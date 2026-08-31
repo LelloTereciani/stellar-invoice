@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/dashboard": {
+      "targetKind": "new-ui",
+      "projectId": "87b6d14c-e7fa-4125-ae92-ec6e253aa3d7",
+      "activeDraftId": "980e347f-4ba2-48a7-b0d3-8c8246637526",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        ".superdesign/init/theme.md",
+        "app/layout.tsx",
+        "app/page.tsx",
+        "app/components/DemoStarter.tsx",
+        "app/components/TestnetWallet.tsx",
+        "app/hooks/useFreighter.ts"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "d027c8b943fa0a16d8f97d73975a70afd1522eda5835fdfcc1f8eba1476d0166",
+        ".superdesign/init/theme.md": "1b5fcde6b0507b2a87066445155ceaec7f1e7b2ec13ab60aa838033dbb98615b",
+        "app/layout.tsx": "a631fd964c4e44798d171c674ce4d2cf01bdb5e61ac98f8f9594db35d71b5d6f",
+        "app/page.tsx": "f9a58fd05d28a49a48d17f3bb14027a4d235d64e0a17ae5b2d91ea22eb920b94",
+        "app/components/DemoStarter.tsx": "ee902e4e93c0f4fbf511c56b178d6c2bc9269d5d987034b5e8ee073ca291913d",
+        "app/components/TestnetWallet.tsx": "812b208bd87722e1902534c89b48d06cb346e209bfefa4fd790e41400b9b2f41",
+        "app/hooks/useFreighter.ts": "ac84e7d849908feff202523ee57361f60f04a6a77ccc3dd87a41125d2897943d"
+      },
+      "components": [],
+      "drafts": {
+        "980e347f-4ba2-48a7-b0d3-8c8246637526": {
+          "title": "StellarInvoice Dashboard",
+          "visualDirection": "technical minimalist ledger blueprint",
+          "currentVersion": 2
+        }
+      },
+      "updatedAt": "2026-08-31T17:59:18Z"
+    }
+  }
+}

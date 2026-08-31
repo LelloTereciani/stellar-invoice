@@ -1,0 +1,283 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StellarInvoice</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: '#F7F7F5',
+            forest: '#1A3C2B',
+            ink: '#17231D',
+            secondary: '#59625D',
+            surface: '#FFFFFF',
+            subdued: '#EFF1ED',
+            gold: '#F4D35E',
+            mint: '#9EFFBF',
+            coral: '#FF8C69',
+            hairline: 'rgba(58, 58, 56, 0.20)',
+            focus: '#286548'
+          },
+          fontFamily: {
+            sans: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          spacing: {
+            1: '4px',
+            2: '8px',
+            3: '12px',
+            4: '16px',
+            6: '24px',
+            8: '32px',
+            12: '48px',
+            16: '64px'
+          },
+          borderRadius: {
+            none: '0',
+            sm: '2px',
+            DEFAULT: '2px',
+            md: '2px',
+            lg: '2px',
+            xl: '2px',
+            '2xl': '2px',
+            '3xl': '2px',
+            full: '2px',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #F7F7F5;
+      color: #17231D;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Minimalist structural grid background */
+    .bg-blueprint {
+        background-image: linear-gradient(rgba(58, 58, 56, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(58, 58, 56, 0.05) 1px, transparent 1px);
+        background-size: 64px 64px;
+    }
+    /* Custom Focus Ring */
+    *:focus-visible {
+      outline: 3px solid #286548;
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex flex-col bg-paper bg-blueprint" data-sd-id="1">
+
+    <!-- Technical Top Bar -->
+    <header class="h-16 border-b border-hairline bg-surface flex items-center justify-between px-6 lg:px-8 z-10 sticky top-0" data-sd-id="2">
+      <div class="flex items-center gap-6" data-sd-id="3">
+        <div class="flex items-center gap-2" data-sd-id="4">
+          <iconify-icon icon="lucide:file-signature" class="text-forest text-2xl"></iconify-icon>
+          <span class="font-bold text-xl tracking-tight text-forest" data-sd-id="5">StellarInvoice</span>
+        </div>
+        <nav class="hidden md:flex gap-4" data-sd-id="6">
+          <a href="#" id="nav-faturas" class="text-ink font-medium border-b-2 border-forest pb-[19px] pt-[21px]" data-sd-id="7">FATURAS</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-4" data-sd-id="8">
+        <div class="bg-gold border border-ink text-ink font-mono text-xs uppercase px-2 py-1 flex items-center gap-1" data-sd-id="9">
+          <div class="w-2 h-2 bg-ink" data-sd-id="10"></div>
+          TESTNET · BRLT FICTÍCIO
+        </div>
+        <button type="button" id="wallet-connect" class="flex items-center gap-2 border border-forest bg-surface text-forest px-4 h-11 text-sm font-medium hover:bg-subdued transition-colors duration-150" data-sd-id="11">
+          <iconify-icon icon="lucide:wallet"></iconify-icon>
+          <span class="font-mono" data-sd-id="12">GDDM...VRKM</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Intro Band -->
+    <section class="border-b border-hairline bg-surface py-6 px-6 lg:px-8" data-sd-id="13">
+      <div class="max-w-[1440px] mx-auto" data-sd-id="14">
+         <h1 class="text-3xl font-bold tracking-tight mb-2 text-ink" data-sd-id="15">Portal de Faturamento</h1>
+         <p class="text-secondary text-base max-w-2xl leading-relaxed" data-sd-id="16">
+           O histórico na rede Stellar é a única fonte da verdade. Revise os detalhes técnicos antes de assinar. Esta aplicação não guarda suas chaves e opera apenas com tokens de demonstração.
+         </p>
+      </div>
+    </section>
+
+    <!-- Main Workspace Grid -->
+    <main class="flex-1 max-w-[1440px] mx-auto w-full px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" data-sd-id="17">
+
+      <!-- Left Column: Invoice List (5 cols) -->
+      <div class="lg:col-span-5 flex flex-col gap-4" data-sd-id="18">
+        <div class="flex justify-between items-center mb-2" data-sd-id="19">
+            <h2 class="text-xl font-bold tracking-tight" data-sd-id="20">Faturas Pendentes</h2>
+            <div class="flex gap-2 text-sm font-medium text-secondary" data-sd-id="21">
+                <button class="text-ink border-b border-ink pb-1" data-sd-id="22">Todas</button>
+                <button class="hover:text-ink pb-1" data-sd-id="23">Pendentes</button>
+                <button class="hover:text-ink pb-1" data-sd-id="24">Confirmadas</button>
+            </div>
+        </div>
+
+        <!-- Invoice List -->
+        <div class="flex flex-col gap-2" data-sd-id="25">
+            <!-- Selected Row -->
+            <button type="button" class="text-left bg-subdued border border-hairline border-l-[3px] border-l-forest p-4 w-full flex flex-col gap-2 transition-colors duration-150 cursor-pointer" data-sd-id="26">
+                <div class="flex justify-between items-start" data-sd-id="27">
+                    <span class="font-mono font-medium text-ink" data-sd-id="28">25000.0000000 BRLT</span>
+                    <span class="border border-ink px-2 py-1 flex items-center gap-1 bg-gold text-ink font-mono text-[11px] uppercase" data-sd-id="29">
+                        <span class="w-2 h-2 bg-ink block" data-sd-id="30"></span>
+                        Pendente
+                    </span>
+                </div>
+                <div class="flex justify-between items-center text-sm text-secondary" data-sd-id="31">
+                    <span data-sd-id="32">Vencimento: <span class="font-mono" data-sd-id="33">2026-09-30</span></span>
+                    <span class="font-mono text-xs" data-sd-id="34">MEMO: 4f0a8d…10b4ce</span>
+                </div>
+            </button>
+
+            <!-- Unselected Row -->
+            <button type="button" class="text-left bg-surface border border-hairline p-4 w-full flex flex-col gap-2 hover:bg-subdued transition-colors duration-150 cursor-pointer" data-sd-id="35">
+                <div class="flex justify-between items-start" data-sd-id="36">
+                    <span class="font-mono font-medium text-ink" data-sd-id="37">1450.5000000 BRLT</span>
+                    <span class="border border-ink px-2 py-1 flex items-center gap-1 bg-mint text-ink font-mono text-[11px] uppercase" data-sd-id="38">
+                        <span class="w-2 h-2 bg-ink block" data-sd-id="39"></span>
+                        Confirmado
+                    </span>
+                </div>
+                <div class="flex justify-between items-center text-sm text-secondary" data-sd-id="40">
+                    <span data-sd-id="41">Vencimento: <span class="font-mono" data-sd-id="42">2026-08-15</span></span>
+                    <span class="font-mono text-xs" data-sd-id="43">MEMO: INV-9950</span>
+                </div>
+            </button>
+            
+            <!-- Unselected Row Expired -->
+            <button type="button" class="text-left bg-surface border border-hairline p-4 w-full flex flex-col gap-2 hover:bg-subdued transition-colors duration-150 cursor-pointer" data-sd-id="44">
+                <div class="flex justify-between items-start" data-sd-id="45">
+                    <span class="font-mono font-medium text-ink" data-sd-id="46">8900.0000000 BRLT</span>
+                    <span class="border border-ink px-2 py-1 flex items-center gap-1 bg-coral text-ink font-mono text-[11px] uppercase" data-sd-id="47">
+                        <span class="w-2 h-2 bg-ink block" data-sd-id="48"></span>
+                        Vencido
+                    </span>
+                </div>
+                <div class="flex justify-between items-center text-sm text-secondary" data-sd-id="49">
+                    <span data-sd-id="50">Vencimento: <span class="font-mono" data-sd-id="51">2026-08-01</span></span>
+                    <span class="font-mono text-xs" data-sd-id="52">MEMO: INV-9812</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Demo Callout -->
+        <div class="mt-4 border border-hairline bg-surface p-4 text-sm" data-sd-id="53">
+            <p class="font-medium mb-2" data-sd-id="54">Ambiente de Demonstração</p>
+            <p class="text-secondary mb-4" data-sd-id="55">Precisa de fundos falsos para testar o fluxo? O faucet da Testnet pode provisionar sua carteira temporária.</p>
+            <button type="button" class="border border-forest text-forest px-4 h-11 font-medium hover:bg-subdued transition-colors duration-150 w-full" data-sd-id="56">
+                Solicitar BRLT Fictício
+            </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Detail View (7 cols) -->
+      <div class="lg:col-span-7 bg-surface border border-hairline p-6 lg:p-8 flex flex-col" data-sd-id="57">
+        <div class="flex justify-between items-start mb-8" data-sd-id="58">
+            <div data-sd-id="59">
+                <h2 class="text-2xl font-bold tracking-tight mb-2" data-sd-id="60">Fatura 4f0a8d…10b4ce</h2>
+                <p class="text-secondary font-mono text-sm" data-sd-id="61">ID: d8f7a6b5-4c3d-4e1f-a173-f62b713a13a0</p>
+            </div>
+            <div class="border border-ink px-2 py-1 flex items-center gap-1 bg-gold text-ink font-mono text-sm uppercase" data-sd-id="62">
+                <span class="w-2 h-2 bg-ink block" data-sd-id="63"></span>
+                Pendente
+            </div>
+        </div>
+
+        <!-- Ledger Data Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 mb-8" data-sd-id="64">
+            <div class="flex flex-col gap-1" data-sd-id="65">
+                <span class="text-xs font-semibold text-secondary uppercase tracking-widest" data-sd-id="66">Valor Exato</span>
+                <span class="font-mono text-xl" data-sd-id="67">25000.0000000 BRLT</span>
+            </div>
+            <div class="flex flex-col gap-1" data-sd-id="68">
+                <span class="text-xs font-semibold text-secondary uppercase tracking-widest" data-sd-id="69">Vencimento</span>
+                <span class="font-mono text-lg" data-sd-id="70">2026-09-30 23:59 UTC</span>
+            </div>
+            
+            <div class="flex flex-col gap-1 md:col-span-2" data-sd-id="71">
+                <span class="text-xs font-semibold text-secondary uppercase tracking-widest" data-sd-id="72">Emissor do Ativo (Issuer)</span>
+                <div class="flex items-center gap-2" data-sd-id="73">
+                  <span class="font-mono text-sm break-all" data-sd-id="74">GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH</span>
+                  <button type="button" class="text-secondary hover:text-ink" aria-label="Copiar endereço do emissor" data-sd-id="75">
+                    <iconify-icon icon="lucide:copy" class="text-lg"></iconify-icon>
+                  </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1 md:col-span-2" data-sd-id="76">
+                <span class="text-xs font-semibold text-secondary uppercase tracking-widest" data-sd-id="77">Destino do Pagamento</span>
+                <div class="flex items-center gap-2" data-sd-id="78">
+                  <span class="font-mono text-sm break-all" data-sd-id="79">GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH</span>
+                  <button type="button" class="text-secondary hover:text-ink" aria-label="Copiar endereço de destino" data-sd-id="80">
+                    <iconify-icon icon="lucide:copy" class="text-lg"></iconify-icon>
+                  </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1 md:col-span-2" data-sd-id="81">
+                <span class="text-xs font-semibold text-secondary uppercase tracking-widest" data-sd-id="82">Devedor (Sua Carteira)</span>
+                <div class="flex items-center gap-2" data-sd-id="83">
+                  <span class="font-mono text-sm break-all" data-sd-id="84">GDDMM4RDODH6BW3AD6RSPMKHWRYQRXEFRPEOJIV7WZ6I2RXXCDUUVRKM</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1" data-sd-id="85">
+                <span class="text-xs font-semibold text-secondary uppercase tracking-widest" data-sd-id="86">Memo Obrigatório</span>
+                <span class="font-mono text-sm bg-subdued px-2 py-1 w-fit" data-sd-id="87">4f0a8d2b96c741eda2f63d10b4ce</span>
+            </div>
+            
+            <div class="flex flex-col gap-1" data-sd-id="88">
+                <span class="text-xs font-semibold text-secondary uppercase tracking-widest" data-sd-id="89">Rede</span>
+                <span class="font-mono text-sm" data-sd-id="90">Stellar Testnet</span>
+            </div>
+        </div>
+
+        <!-- Rejected Audit Section -->
+        <div class="mb-8 border-l-2 border-coral pl-4" data-sd-id="91">
+            <p class="text-sm text-secondary font-medium mb-1" data-sd-id="92">Histórico de tentativas</p>
+            <p class="text-sm font-mono text-ink" data-sd-id="93">1 tentativa rejeitada (valor divergente) · 2026-08-28 14:32 UTC</p>
+        </div>
+
+        <hr class="border-hairline mb-8">
+
+        <!-- Actions Area -->
+        <div class="flex flex-col gap-4" data-sd-id="94">
+            <div class="bg-subdued border border-hairline p-4 text-sm mb-2" data-sd-id="95">
+                <p class="font-semibold flex items-center gap-2 mb-1" data-sd-id="96">
+                    <iconify-icon icon="lucide:alert-triangle" class="text-forest"></iconify-icon>
+                    Aviso de Segurança
+                </p>
+                <p class="text-secondary" data-sd-id="97">
+                    Você será solicitado a assinar a transação em sua extensão de carteira (Freighter). Nós nunca solicitaremos sua chave privada (seed). O pagamento é irrevogável após a confirmação na rede.
+                </p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4" data-sd-id="98">
+                <button type="button" class="flex-1 bg-surface border border-forest text-forest h-11 px-6 font-medium hover:bg-subdued transition-colors duration-150 flex items-center justify-center gap-2" data-sd-id="99">
+                    Estabelecer Trustline
+                </button>
+                <button type="button" class="flex-1 bg-forest text-paper h-11 px-6 font-medium hover:bg-forest/90 transition-colors duration-150 flex items-center justify-center gap-2" data-sd-id="100">
+                    Revisar e Assinar Pagamento
+                    <iconify-icon icon="lucide:arrow-right"></iconify-icon>
+                </button>
+            </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+</body></html>
