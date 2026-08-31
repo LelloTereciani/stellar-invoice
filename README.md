@@ -4,7 +4,7 @@ MVP de faturamento B2B na Stellar Testnet com o ativo fictício `BRLT`.
 
 ## Estado atual
 
-O projeto inicia com configuração exclusiva de Testnet e testes da fronteira de configuração. A implementação completa segue o [plano de implementação](docs/superpowers/plans/2026-08-31-stellar-invoice.md) e a [especificação funcional](docs/specs/2026-08-31-stellar-invoice-especificacao-funcional.md).
+O backend Testnet, autenticação por carteira, faturas, XDR assinado pelo cliente, verificação no ledger, demonstração limitada e Supabase auto-hospedado estão implementados. O painel visual aprovado no Superdesign ainda é o gate explícito para concluir a interface.
 
 ## Desenvolvimento local
 
@@ -14,7 +14,7 @@ O projeto inicia com configuração exclusiva de Testnet e testes da fronteira d
 
 ## Deploy no EasyPanel
 
-O repositório já contém `Dockerfile` de produção para Node 22 e a pilha Supabase Docker em `infra/supabase/`. No EasyPanel, use o Dockerfile na raiz para a aplicação e os dois arquivos Compose indicados em [infra/supabase/STELLAR_INVOICE.md](infra/supabase/STELLAR_INVOICE.md) para o banco auto-hospedado. Configure os valores de `.env.example` como segredos do ambiente; execute `pnpm demo:bootstrap` uma vez em ambiente Testnet e copie somente as chaves públicas e as variáveis operacionais necessárias.
+O repositório contém o Dockerfile Node 22 e a pilha Supabase Docker em `infra/supabase/`. No EasyPanel, use os três arquivos Compose indicados em [infra/supabase/STELLAR_INVOICE.md](infra/supabase/STELLAR_INVOICE.md). Configure os valores dos dois exemplos de ambiente como segredos; execute `pnpm demo:bootstrap` uma vez em Testnet e copie somente chaves públicas e variáveis operacionais necessárias. Preflight, backup, restauração isolada e rollback estão em [docs/operations.md](docs/operations.md).
 
 The production image excludes local environment files and `demo-wallet.json`, so Testnet seeds never enter the build context.
 

@@ -7,12 +7,12 @@ O template oficial Docker do Supabase está versionado neste diretório a partir
 ## EasyPanel configuration
 
 1. Deploy the repository from GitHub with Docker Compose support.
-2. Use these Compose files in this order: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/supabase/docker-compose.app.yml`. They intentionally share the same base directory so Docker resolves every bind mount and build context correctly.
+2. Use these Compose files in this order: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/supabase/docker-compose.app.yml`. Every relative path is authored against the first file's directory.
 3. Create the required environment values from `infra/supabase/.env.example` in EasyPanel. Generate all secrets with the included `utils/generate-keys.sh` and `utils/add-new-auth-keys.sh`; never retain their output in Git, browser logs, or chat.
 4. Set the public URLs to the final HTTPS domain and restrict CORS/site redirects to that domain.
 5. Attach persistent storage for `infra/supabase/volumes` and keep a backup outside that volume.
 
-The project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; apply reviewed SQL migrations explicitly during a controlled maintenance window.
+All eleven project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; back up first and apply only reviewed new SQL migrations during a controlled maintenance window.
 
 As migrations do projeto são montadas pela sobreposição do StellarInvoice e executam quando o Postgres inicializa um volume de dados **novo**. Volumes existentes não são alterados automaticamente na inicialização; aplique migrações SQL revisadas explicitamente em uma janela de manutenção controlada.
 

@@ -22,6 +22,33 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm audit --prod --audit-level high
+      - name: Validate operations scripts
+        run: shellcheck infra/*.sh
+      - name: Validate private Compose topology
+        run: |
+          docker compose --env-file infra/supabase/.env.example --env-file infra/.env.example \
+            -f infra/supabase/docker-compose.yml \
+            -f infra/supabase/docker-compose.stellar-invoice.yml \
+            -f infra/supabase/docker-compose.app.yml config --quiet
+          published=$(docker compose --env-file infra/supabase/.env.example --env-file infra/.env.example \
+            -f infra/supabase/docker-compose.yml \
+            -f infra/supabase/docker-compose.stellar-invoice.yml \
+            -f infra/supabase/docker-compose.app.yml config --format json \
+            | jq -r '.services | to_entries[] | select(.value.ports != null and (.value.ports | length > 0)) | .key' | sort -u)
+          test "$published" = caddy
+      - name: Validate Caddy configuration
+        run: docker run --rm --volume "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" --env APP_DOMAIN=localhost caddy:2.10-alpine caddy validate --config /etc/caddy/Caddyfile
+      - name: Build and smoke-test production image
+        run: |
+          docker build --tag stellar-invoice:test .
+          docker run --detach --name stellar-invoice-test --publish 127.0.0.1:3000:3000 stellar-invoice:test
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/ >/dev/null; then break; fi
+            if [ "$attempt" = 30 ]; then docker logs stellar-invoice-test; exit 1; fi
+            sleep 1
+          done
+          test "$(docker inspect --format '{{.Config.User}}' stellar-invoice-test)" = nextjs
+          docker rm --force stellar-invoice-test
 
   database:
     runs-on: ubuntu-latest
