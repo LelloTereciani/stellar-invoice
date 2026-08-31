@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadStellarConfig, requireServerEnv } from "../app/lib/config.js";
+import { loadDemoConfig, loadStellarConfig, requireServerEnv } from "../app/lib/config.js";
 
 describe("loadStellarConfig", () => {
   it("rejects a configuration that points to a network other than Stellar Testnet", () => {
@@ -39,5 +39,25 @@ describe("requireServerEnv", () => {
     expect(() => requireServerEnv("STELLAR_ISSUER_SECRET", {})).toThrow(
       "Missing required environment variable: STELLAR_ISSUER_SECRET",
     );
+  });
+});
+
+describe("loadDemoConfig", () => {
+  it("rejects a disabled demo mode instead of making test funding public by default", () => {
+    expect(() =>
+      loadDemoConfig({
+        DEMO_MODE: "disabled",
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+      }),
+    ).toThrow("Demo mode is disabled");
+  });
+
+  it("allows demo provisioning only when it is explicitly enabled on Testnet", () => {
+    expect(
+      loadDemoConfig({
+        DEMO_MODE: "enabled",
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+      }),
+    ).toEqual({ enabled: true, network: "testnet" });
   });
 });

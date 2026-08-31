@@ -1,6 +1,6 @@
 # StellarInvoice — Especificação Funcional
 
-**Status:** Proposta para aprovação.
+**Status:** Aprovada para execução em 31/08/2026.
 
 ## 1. Propósito
 
@@ -23,7 +23,7 @@ Uma carteira não recebe privilégios de emissor somente por informar um endere�
 - A rede é exclusivamente Stellar Testnet.
 - A moeda faturada é o ativo clássico fictício `BRLT`, identificado sempre por `BRLT` e pela chave pública do emissor.
 - O emissor possui uma conta emissora e uma conta distribuidora de BRLT, ambas configuradas pela rotina administrativa.
-- Para a demonstração, o administrador entrega BRLT de teste manualmente a uma carteira cliente que já tenha criado trustline. Essa entrega não é uma funcionalidade pública do painel.
+- O modo demonstração cria e financia automaticamente uma carteira cliente de Testnet, usando Friendbot somente para XLM e a conta distribuidora somente para BRLT de teste.
 
 ## 4. Fatura
 
@@ -73,7 +73,17 @@ O administrador executa uma rotina protegida fora do painel público. Ela cria o
 3. Com a carteira devedora na Testnet, o cliente pode assinar a criação da trustline para BRLT.
 4. O cliente precisa dispor de BRLT de teste antes de efetuar o pagamento.
 
-### 6.4 Pagar e confirmar
+### 6.4 Modo demonstração autônomo
+
+1. O usuário aciona **Iniciar demonstração** exclusivamente quando `DEMO_MODE` estiver habilitado e a rede for Testnet.
+2. O navegador cria uma carteira cliente efêmera/local; a seed permanece no armazenamento local do navegador e não é enviada à API, ao banco ou aos logs.
+3. A API recebe apenas a chave pública, confirma que a sessão de demonstração ainda não foi provisionada e pede XLM de teste ao Friendbot.
+4. A API cria a trustline BRLT por meio da transação assinada no navegador; depois dela confirmada, a conta distribuidora envia uma quantidade fixa e limitada de BRLT de teste ao cliente.
+5. O painel cria uma fatura de demonstração e conduz o usuário para assiná-la e confirmá-la.
+
+O modo demonstração é bloqueado em mainnet, desabilitado por padrão e protegido contra repetição por carteira/sessão. Ele não cria seed de cliente no servidor e não disponibiliza retirada de ativos reais.
+
+### 6.5 Pagar e confirmar
 
 1. O app monta a transação de pagamento com destino, ativo, valor e memo imutáveis da fatura.
 2. O cliente revisa e assina a transação na própria carteira.
@@ -90,6 +100,7 @@ O administrador executa uma rotina protegida fora do painel público. Ela cria o
 | Nova fatura | Campos de carteira do cliente, valor BRLT e vencimento; mostra erros de validação e confirma a criação. |
 | Detalhe da fatura | Estado, valor, ativo com emissor, cliente, memo, vencimento, hash, tentativas rejeitadas com seus motivos e ação de verificar. |
 | Pagamento do cliente | Conectar carteira, checar Testnet/trustline/saldo, criar trustline, assinar pagamento e acompanhar o hash. |
+| Demonstração | Iniciar uma sessão Testnet, criar a carteira local, receber XLM/BRLT de teste, criar a fatura e executar o pagamento guiado. |
 
 Todos os erros precisam explicar a próxima ação: instalar/conectar carteira, trocar para Testnet, criar trustline, obter BRLT de teste, corrigir endereço/valor/vencimento ou tentar a verificação novamente.
 
@@ -102,6 +113,7 @@ Todos os erros precisam explicar a próxima ação: instalar/conectar carteira, 
 - O cliente só pode consultar as faturas associadas à própria carteira; o emissor só consulta suas próprias faturas.
 - O banco persiste no volume Docker da VPS, com backup e restauração testada antes de disponibilizar o MVP.
 - Comentários de código que expliquem regras de negócio, segurança ou decisões técnicas são escritos em inglês e português; comentários redundantes são evitados.
+- Em modo demonstração, a seed do cliente é gerada e mantida apenas no navegador; a distribuição automatizada nunca recebe essa seed e envia somente BRLT fictício, com valor fixo e limite por sessão.
 
 ## 9. Critérios de aceite
 
@@ -112,7 +124,8 @@ Todos os erros precisam explicar a próxima ação: instalar/conectar carteira, 
 5. Pagamentos com rede, ativo, emissor, destino, valor ou memo incorretos não confirmam a fatura; são registrados como tentativas rejeitadas e a fatura continua pendente até vencer ou receber um pagamento válido.
 6. Fatura não paga passa a vencida após o vencimento.
 7. O MVP roda na VPS com Docker e Supabase auto-hospedado, sem Vercel nem Supabase Cloud.
+8. O modo demonstração cria uma carteira cliente local, obtém XLM via Friendbot, recebe BRLT de teste e permite concluir uma fatura sem configuração manual de chaves.
 
 ## 10. Fora do escopo deste MVP
 
-- Stellar mainnet, dinheiro real, KYC, câmbio, cobrança recorrente/automática, custódia de chaves de clientes, envio de pagamentos pelo servidor, painel público de distribuição de BRLT, notificações e integrações bancárias.
+- Stellar mainnet, dinheiro real, KYC, câmbio, cobrança recorrente/automática, custódia de chaves de clientes, envio de pagamentos de clientes pelo servidor, distribuição pública sem limites de BRLT, notificações e integrações bancárias.

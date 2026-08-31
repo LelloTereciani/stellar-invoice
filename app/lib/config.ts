@@ -9,6 +9,11 @@ type PublicEnvironment = {
 
 type ServerEnvironment = Record<string, string | undefined>;
 
+type DemoEnvironment = {
+  DEMO_MODE?: string;
+  NEXT_PUBLIC_STELLAR_NETWORK?: string;
+};
+
 export type StellarConfig = {
   assetCode: "BRLT";
   horizonUrl: string;
@@ -26,6 +31,23 @@ export function requireServerEnv(name: string, environment: ServerEnvironment): 
   }
 
   return value;
+}
+
+// Demo funding is opt-in and never allowed outside Stellar Testnet.
+// O financiamento de demonstração exige ativação e nunca é permitido fora da Stellar Testnet.
+export function loadDemoConfig(environment: DemoEnvironment): {
+  enabled: true;
+  network: "testnet";
+} {
+  if (environment.DEMO_MODE !== "enabled") {
+    throw new Error("Demo mode is disabled");
+  }
+
+  if (environment.NEXT_PUBLIC_STELLAR_NETWORK !== "testnet") {
+    throw new Error("StellarInvoice accepts only Stellar Testnet");
+  }
+
+  return { enabled: true, network: "testnet" };
 }
 
 export function loadStellarConfig(environment: PublicEnvironment): StellarConfig {

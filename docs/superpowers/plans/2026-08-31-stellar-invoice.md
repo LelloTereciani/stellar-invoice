@@ -22,6 +22,7 @@
 - A confirmação exige uma operação `payment` concluída na Testnet com destino, ativo, valor e memo exatamente iguais aos da fatura; uma transação não pode confirmar duas faturas.
 - O Postgres fica em volume persistente na VPS. Kong/Studio/PostgREST não são publicados diretamente na internet; somente Caddy expõe HTTPS para o app.
 - Comentários necessários para explicar regras, segurança ou decisões não óbvias são bilingues: inglês e português.
+- O modo demonstração é Testnet-only, desabilitado por padrão e mantém a seed do cliente exclusivamente no navegador; Friendbot fornece apenas XLM e a distribuidora envia BRLT de valor fixo e limitado.
 - Não implementar mainnet, KYC, câmbio, cobrança automática, custódia de seed de cliente, pagamento iniciado pelo servidor ou Supabase Cloud.
 
 ---
@@ -46,10 +47,10 @@
 - Produces `stellarConfig: { horizonUrl: string; networkPassphrase: string; assetCode: "BRLT"; issuerPublicKey: string }`.
 - Produces `requireServerEnv(name: string): string`, que recusa variáveis vazias.
 
-- [ ] Escrever testes que rejeitem rede diferente de Testnet, chave pública ausente e código de ativo diferente de `BRLT`.
-- [ ] Implementar o carregamento de configuração com `NEXT_PUBLIC_STELLAR_ISSUER`, `NEXT_PUBLIC_STELLAR_HORIZON_URL` e apenas a seed administrativa `STELLAR_ISSUER_SECRET` no ambiente de servidor.
-- [ ] Documentar os requisitos Node 22, Docker Compose e carteira Freighter; versionar somente `.env.example`, sem valores reais.
-- [ ] Executar `pnpm test tests/config.test.ts` e `pnpm build`.
+- [x] Escrever testes que rejeitem rede diferente de Testnet, chave pública ausente e código de ativo diferente de `BRLT`.
+- [x] Implementar o carregamento de configuração com `NEXT_PUBLIC_STELLAR_ISSUER`, `NEXT_PUBLIC_STELLAR_HORIZON_URL` e apenas a seed administrativa `STELLAR_ISSUER_SECRET` no ambiente de servidor.
+- [x] Documentar os requisitos Node 22, Docker Compose e carteira Freighter; versionar somente `.env.example`, sem valores reais.
+- [x] Executar `pnpm test tests/config.test.ts` e `pnpm build`.
 
 ### Task 2: Provisionar Supabase auto-hospedado e o modelo de faturas
 
@@ -80,6 +81,22 @@
 - [ ] Implementar conta emissora separada da conta de distribuição, financiamento apenas na Testnet, trustline da distribuição e emissão inicial de BRLT para ela.
 - [ ] Fazer o script persistir somente chaves públicas e configuração de ativo no banco; encerrar com erro antes de registrar configuração se a transação não for bem-sucedida.
 - [ ] Executar o script duas vezes em Testnet e registrar hashes e chaves públicas no README, sem seeds.
+
+### Task 3A: Automatizar a demonstração de Testnet
+
+**Files:**
+- Create: `app/lib/demo/session.ts`, `app/api/demo/provision/route.ts`, `app/components/DemoStarter.tsx`
+- Modify: `scripts/bootstrap-issuer.ts`, `app/lib/stellar/transactions.ts`
+- Test: `tests/demo/session.test.ts`, `tests/api/demo-provision.test.ts`
+
+**Interfaces:**
+- `createDemoWallet()` gera uma carteira cliente somente no navegador.
+- `POST /api/demo/provision` aceita apenas a chave pública da carteira e retorna os dados públicos da sessão; não aceita nem retorna seed.
+
+- [ ] Testar bloqueio fora de Testnet, modo desabilitado, chave inválida, provisão duplicada e vazamento de seed em resposta/log.
+- [ ] Implementar Friendbot para XLM, trustline assinada pelo navegador e distribuição de BRLT com valor fixo e limite por sessão.
+- [ ] Criar fluxo guiado que deixa o usuário com fatura, saldo BRLT e pagamento pronto para assinatura.
+- [ ] Executar uma demonstração Testnet completa e registrar somente chaves públicas e hashes no README.
 
 ### Task 4: Implementar autenticação de emissor e API de faturas
 
