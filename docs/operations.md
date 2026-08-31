@@ -2,7 +2,7 @@
 
 ## Deployment gate
 
-Use the three Compose files together: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/docker-compose.yml`. Set all values from both environment examples in EasyPanel; never use template defaults or commit the resulting files.
+Use the three Compose files together: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/supabase/docker-compose.app.yml`. Set all values from both environment examples in EasyPanel; never use template defaults or commit the resulting files.
 
 Only Caddy may publish ports 80 and 443. Confirm `docker compose config` contains no public Supabase, Postgres, Studio or pooler port.
 

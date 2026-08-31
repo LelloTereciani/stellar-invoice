@@ -7,7 +7,7 @@ O template oficial Docker do Supabase está versionado neste diretório a partir
 ## EasyPanel configuration
 
 1. Deploy the repository from GitHub with Docker Compose support.
-2. Use both Compose files, in this order: `infra/supabase/docker-compose.yml` and `infra/supabase/docker-compose.stellar-invoice.yml`.
+2. Use these Compose files in this order: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/supabase/docker-compose.app.yml`. They intentionally share the same base directory so Docker resolves every bind mount and build context correctly.
 3. Create the required environment values from `infra/supabase/.env.example` in EasyPanel. Generate all secrets with the included `utils/generate-keys.sh` and `utils/add-new-auth-keys.sh`; never retain their output in Git, browser logs, or chat.
 4. Set the public URLs to the final HTTPS domain and restrict CORS/site redirects to that domain.
 5. Attach persistent storage for `infra/supabase/volumes` and keep a backup outside that volume.
