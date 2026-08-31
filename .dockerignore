@@ -1,0 +1,11 @@
+.git
+.next
+node_modules
+coverage
+.env
+.env.*
+!/.env.example
+demo-wallet.json
+playwright-report
+test-results
+tsconfig.tsbuildinfo
