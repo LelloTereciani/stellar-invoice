@@ -23,4 +23,11 @@ describe("Testnet demo sessions", () => {
     expect(() => consumeDemoSession(session.id, 1_001)).toThrow("already been used");
     expect(() => consumeDemoSession("00000000-0000-0000-0000-000000000000", 1_001)).toThrow("not found");
   });
+
+  it("prevents parallel claims by the same wallet and clears expired sessions", () => {
+    resetDemoSessions();
+    createDemoSession(customerPublicKey, 1_000);
+    expect(() => createDemoSession(customerPublicKey, 1_001)).toThrow("already has an active session");
+    expect(() => createDemoSession(customerPublicKey, 1_000 + 10 * 60 * 1000)).not.toThrow();
+  });
 });
