@@ -2,7 +2,7 @@ import { NextResponse } from "next/server.js";
 import { Keypair } from "@stellar/stellar-sdk";
 
 import { loadDemoConfig, loadStellarConfig } from "../../../lib/config.js";
-import { createDemoSession } from "../../../lib/demo/session.js";
+import { createPersistentDemoSession } from "../../../lib/demo/persistent-session.js";
 import { fundDemoWallet } from "../../../lib/demo/provisioning.js";
 import { buildTrustlineXdr } from "../../../lib/stellar/transactions.js";
 
@@ -16,14 +16,14 @@ export async function POST(request: Request) {
     Keypair.fromPublicKey(publicKey);
 
     const stellar = loadStellarConfig(process.env);
+    const sessionId = await createPersistentDemoSession(publicKey);
     await fundDemoWallet(publicKey);
-    const session = createDemoSession(publicKey);
     const trustlineXdr = await buildTrustlineXdr(publicKey, stellar.issuerPublicKey);
 
     return NextResponse.json({
       assetCode: stellar.assetCode,
       issuerPublicKey: stellar.issuerPublicKey,
-      sessionId: session.id,
+      sessionId,
       trustlineXdr,
     });
   } catch (error: unknown) {
