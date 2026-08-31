@@ -2,7 +2,7 @@
 set -eu
 umask 077
 
-project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 supabase_dir="$project_root/infra/supabase"
 environment_file=${ENV_FILE:-"$supabase_dir/.env"}
 backup_dir=${BACKUP_DIR:-"$project_root/backups/postgres"}

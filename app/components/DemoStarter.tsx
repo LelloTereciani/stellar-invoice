@@ -1,27 +1,18 @@
 "use client";
 
-import { Horizon, Keypair, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Horizon, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
 import { Buffer } from "buffer";
 import { useState } from "react";
 
 import { buildDemoClaimMessage } from "../lib/demo/claim-message.js";
+import { authenticateDemoWallet, getOrCreateDemoWallet } from "../lib/stellar/demo-wallet-client.js";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
-const LOCAL_KEY = "stellar-invoice-demo-customer-secret";
 
 type ProvisionResponse = {
   sessionId: string;
   trustlineXdr: string;
 };
-
-function demoWallet() {
-  const existing = window.localStorage.getItem(LOCAL_KEY);
-  if (existing) return Keypair.fromSecret(existing);
-  const wallet = Keypair.random();
-  // The browser alone retains this disposable Testnet seed. / Somente o navegador retém esta seed Testnet descartável.
-  window.localStorage.setItem(LOCAL_KEY, wallet.secret());
-  return wallet;
-}
 
 export function DemoStarter() {
   const [message, setMessage] = useState("Crie uma demonstração Testnet com BRLT fictício.");
@@ -30,7 +21,7 @@ export function DemoStarter() {
   async function startDemo() {
     try {
       setMessage("Criando carteira e solicitando XLM de teste...");
-      const wallet = demoWallet();
+      const wallet = getOrCreateDemoWallet();
       setPublicKey(wallet.publicKey());
       const response = await fetch("/api/demo/provision", {
         body: JSON.stringify({ publicKey: wallet.publicKey() }),
@@ -52,9 +43,12 @@ export function DemoStarter() {
         headers: { "content-type": "application/json" },
         method: "POST",
       });
-      const result = (await distribution.json()) as { amount?: string; error?: string };
+      const result = (await distribution.json()) as { amount?: string; error?: string; invoiceId?: string };
       if (!distribution.ok) throw new Error(result.error ?? "Não foi possível receber BRLT de demonstração");
+      setMessage("Autenticando sua carteira descartável...");
+      await authenticateDemoWallet(wallet);
       setMessage(`Demonstração pronta: ${result.amount} BRLT fictícios foram enviados à sua carteira Testnet.`);
+      if (result.invoiceId) window.location.assign(`/invoices/${encodeURIComponent(result.invoiceId)}`);
     } catch (error: unknown) {
       setMessage(error instanceof Error ? error.message : "A demonstração não pôde ser concluída");
     }

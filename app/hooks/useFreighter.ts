@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   authenticateFreighterWallet,
@@ -8,6 +8,7 @@ import {
   payInvoiceWithFreighter,
 } from "../lib/stellar/freighter-client.js";
 import type { PendingInvoice } from "../lib/stellar/transactions.js";
+import { authenticateDemoWallet, payInvoiceWithDemoWallet, readDemoWallet } from "../lib/stellar/demo-wallet-client.js";
 
 export type WalletFlowStatus =
   | "idle"
@@ -26,6 +27,15 @@ export function useFreighter() {
   const [status, setStatus] = useState<WalletFlowStatus>("idle");
   const [error, setError] = useState<string>();
   const [transactionHash, setTransactionHash] = useState<string>();
+  const [walletKind, setWalletKind] = useState<"demo" | "freighter">();
+
+  useEffect(() => {
+    const demoWallet = readDemoWallet();
+    if (demoWallet) {
+      setWalletPublicKey(demoWallet.publicKey());
+      setWalletKind("demo");
+    }
+  }, []);
 
   const connect = useCallback(async () => {
     try {
@@ -33,10 +43,29 @@ export function useFreighter() {
       setStatus("connecting");
       const address = await authenticateFreighterWallet();
       setWalletPublicKey(address);
+      setWalletKind("freighter");
       setStatus("authenticated");
       return address;
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : "Wallet connection failed");
+      setStatus("error");
+      return undefined;
+    }
+  }, []);
+
+  const connectDemo = useCallback(async () => {
+    try {
+      setError(undefined);
+      setStatus("connecting");
+      const wallet = readDemoWallet();
+      if (!wallet) throw new Error("No demo wallet exists in this browser");
+      const address = await authenticateDemoWallet(wallet);
+      setWalletPublicKey(address);
+      setWalletKind("demo");
+      setStatus("authenticated");
+      return address;
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : "Demo wallet connection failed");
       setStatus("error");
       return undefined;
     }
@@ -74,7 +103,13 @@ export function useFreighter() {
       const response = await fetch(`/api/invoices/${encodeURIComponent(invoice.id)}/payment`);
       const payload = (await response.json()) as { error?: string; xdr?: string };
       if (!response.ok || !payload.xdr) throw new Error(payload.error || "Payment could not be prepared");
-      const hash = await payInvoiceWithFreighter({ invoice, onStage: setStatus, walletPublicKey, xdr: payload.xdr });
+      const localWallet = walletKind === "demo" ? readDemoWallet() : undefined;
+      if (walletKind === "demo" && (!localWallet || localWallet.publicKey() !== walletPublicKey)) {
+        throw new Error("The local demo wallet changed");
+      }
+      const hash = localWallet
+        ? await payInvoiceWithDemoWallet({ invoice, onStage: setStatus, wallet: localWallet, xdr: payload.xdr })
+        : await payInvoiceWithFreighter({ invoice, onStage: setStatus, walletPublicKey, xdr: payload.xdr });
       setTransactionHash(hash);
       setStatus("verifying");
       const verificationResponse = await fetch(`/api/invoices/${encodeURIComponent(invoice.id)}/verify`, {
@@ -93,7 +128,7 @@ export function useFreighter() {
       setStatus("error");
       return undefined;
     }
-  }, [walletPublicKey]);
+  }, [walletKind, walletPublicKey]);
 
-  return { connect, createTrustline, error, payInvoice, status, transactionHash, walletPublicKey };
+  return { connect, connectDemo, createTrustline, error, payInvoice, status, transactionHash, walletKind, walletPublicKey };
 }

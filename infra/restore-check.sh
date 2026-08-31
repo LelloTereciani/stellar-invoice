@@ -7,7 +7,7 @@ if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
 fi
 gzip -t "$1"
 
-project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 restore_container="stellar-invoice-restore-check-$$"
 cleanup() { docker rm --force "$restore_container" >/dev/null 2>&1 || true; }
 trap cleanup EXIT INT TERM

@@ -5,11 +5,11 @@ import { requireServerEnv } from "../config.js";
 
 const TTL_MS = 10 * 60 * 1000;
 const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
-type DistributionRow = { attempt_key: string | null; customer_public_key: string; signed_xdr: string | null; status: "preparing" | "prepared" | "confirmed"; transaction_hash: string | null };
-export type DemoDistribution = { attemptKey: string | null; customerPublicKey: string; signedXdr: string | null; status: "preparing" | "prepared" | "confirmed"; transactionHash: string | null };
+type DistributionRow = { attempt_key: string | null; customer_public_key: string; invoice_id: string | null; signed_xdr: string | null; status: "preparing" | "prepared" | "confirmed"; transaction_hash: string | null };
+export type DemoDistribution = { attemptKey: string | null; customerPublicKey: string; invoiceId: string | null; signedXdr: string | null; status: "preparing" | "prepared" | "confirmed"; transactionHash: string | null };
 
 function mapDistribution(row: DistributionRow): DemoDistribution {
-  return { attemptKey: row.attempt_key, customerPublicKey: row.customer_public_key, signedXdr: row.signed_xdr, status: row.status, transactionHash: row.transaction_hash };
+  return { attemptKey: row.attempt_key, customerPublicKey: row.customer_public_key, invoiceId: row.invoice_id, signedXdr: row.signed_xdr, status: row.status, transactionHash: row.transaction_hash };
 }
 
 function database() {
@@ -56,4 +56,16 @@ export async function completeDemoDistribution(customerPublicKey: string, transa
   const { data, error } = await database().rpc("complete_demo_distribution", { distribution_customer_public_key: customerPublicKey, distribution_transaction_hash: transactionHash });
   if (error || !data) throw new Error("Demo distribution could not be completed");
   return mapDistribution(data as DistributionRow);
+}
+
+export async function ensureDemoInvoice(customerPublicKey: string, issuerPublicKey: string) {
+  const { data, error } = await database().rpc("ensure_demo_invoice", {
+    demo_amount: "5.0000000",
+    demo_customer_public_key: customerPublicKey,
+    demo_due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    demo_issuer_public_key: issuerPublicKey,
+    demo_memo: randomUUID().replaceAll("-", "").slice(0, 28),
+  });
+  if (error || !data) throw new Error("Demo invoice could not be created");
+  return data as { id: string; memo: string; status: "pending" };
 }

@@ -21,6 +21,7 @@ select public.test_assert(not has_function_privilege('authenticated', 'public.co
 select public.test_assert(has_function_privilege('service_role', 'public.confirm_invoice(uuid,text,timestamptz)', 'EXECUTE'), 'service role can confirm invoices');
 select public.test_assert(not has_function_privilege('authenticated', 'public.create_wallet_challenge(uuid,text,text,timestamptz)', 'EXECUTE'), 'authenticated cannot mint wallet challenges');
 select public.test_assert(not has_function_privilege('authenticated', 'public.reserve_demo_distribution(text,uuid,timestamptz)', 'EXECUTE'), 'authenticated cannot reserve demo distributions');
+select public.test_assert(not has_function_privilege('authenticated', 'public.ensure_demo_invoice(text,text,numeric,text,timestamptz)', 'EXECUTE'), 'authenticated cannot create demo invoices');
 select public.test_assert((select bool_and(relrowsecurity) from pg_class where oid in (
   'public.invoices'::regclass,
   'public.rejected_payment_attempts'::regclass,
@@ -109,6 +110,12 @@ select public.test_assert(
   (public.complete_demo_distribution('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', repeat('f', 64))).status = 'confirmed',
   'distribution completion is idempotent'
 );
+select public.test_assert(
+  (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 5.0000000, 'demo-invoice-one', now() + interval '1 day')).id =
+  (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 5.0000000, 'ignored-retry-memo', now() + interval '1 day')).id,
+  'demo invoice creation is idempotent'
+);
+select public.test_assert((select count(*) from public.invoices where debtor_public_key = 'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA') = 1, 'demo wallet receives one invoice');
 reset role;
 
 do $$

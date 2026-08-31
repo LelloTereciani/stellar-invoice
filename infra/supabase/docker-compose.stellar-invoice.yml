@@ -24,3 +24,4 @@ services:
       - ../../supabase/migrations/0009_wallet_authentication.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0009.sql:ro,Z
       - ../../supabase/migrations/0010_service_role_privileges.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0010.sql:ro,Z
       - ../../supabase/migrations/0011_demo_distribution_state_machine.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0011.sql:ro,Z
+      - ../../supabase/migrations/0012_demo_invoice.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0012.sql:ro,Z

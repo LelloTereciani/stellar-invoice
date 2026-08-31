@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 supabase_dir="$project_root/infra/supabase"
 environment_file=${1:-"$supabase_dir/.env"}
 
