@@ -17,7 +17,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       fetch(`${STELLAR_TESTNET.horizonUrl}/transactions/${transactionHash}/operations`),
     ]);
     if (!transactionResponse.ok || !operationsResponse.ok) throw new Error("Transaction was not found on Stellar Testnet");
-    const result = verifyPayment(invoice, await transactionResponse.json(), (await operationsResponse.json())._embedded.records);
+    const transaction = await transactionResponse.json();
+    if (transaction.hash !== transactionHash) throw new Error("Ledger returned an unexpected transaction");
+    const result = verifyPayment(invoice, transaction, (await operationsResponse.json())._embedded.records);
     if (result.status !== "confirmed") return NextResponse.json(result, { status: 422 });
     return NextResponse.json(await confirmInvoice(invoice.id, result.transactionHash));
   } catch (error: unknown) {

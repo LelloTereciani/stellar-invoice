@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { verifyPayment } from "../../app/lib/stellar/payment-verifier.js";
 
 const invoice = { amount: "10.0000000", assetIssuer: "GISSUER", debtorPublicKey: "GDEBTOR", issuerPublicKey: "GISSUER", memo: "inv-123" };
-const transaction = { hash: "a".repeat(64), memo: "inv-123", source_account: "GDEBTOR", successful: true };
-const operation = { amount: "10.0000000", asset_code: "BRLT", asset_issuer: "GISSUER", destination: "GISSUER", type: "payment" };
+const transaction = { hash: "a".repeat(64), memo: "inv-123", memo_type: "text" as const, source_account: "GDEBTOR", successful: true };
+const operation = { amount: "10.0000000", asset_code: "BRLT", asset_issuer: "GISSUER", destination: "GISSUER", source_account: "GDEBTOR", transaction_successful: true, type: "payment" };
 
 describe("ledger payment verification", () => {
   it("confirms only an exact invoice payment", () => expect(verifyPayment(invoice, transaction, [operation])).toMatchObject({ status: "confirmed" }));
