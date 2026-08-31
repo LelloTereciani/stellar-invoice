@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server.js";
 
-import { loadDemoDistributionConfig } from "../../../lib/config.js";
+import { assertTrustedOrigin } from "../../../lib/auth/request-origin.js";
+import { loadDemoDistributionConfig, requireServerEnv } from "../../../lib/config.js";
 import { consumePersistentDemoSession, recordDemoDistribution } from "../../../lib/demo/persistent-session.js";
 import { DEMO_ASSET_AMOUNT, distributeDemoBrlt } from "../../../lib/demo/provisioning.js";
 
@@ -8,6 +9,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    assertTrustedOrigin(request, requireServerEnv("APP_ORIGIN", process.env));
     const { sessionId } = (await request.json()) as { sessionId?: string };
     if (!sessionId) throw new Error("A demo session is required");
 

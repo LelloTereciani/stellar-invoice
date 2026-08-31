@@ -2,6 +2,8 @@ import { NextResponse } from "next/server.js";
 import { Keypair } from "@stellar/stellar-sdk";
 
 import { loadDemoConfig, loadStellarConfig } from "../../../lib/config.js";
+import { requireServerEnv } from "../../../lib/config.js";
+import { assertTrustedOrigin } from "../../../lib/auth/request-origin.js";
 import { createPersistentDemoSession } from "../../../lib/demo/persistent-session.js";
 import { fundDemoWallet } from "../../../lib/demo/provisioning.js";
 import { buildTrustlineXdr } from "../../../lib/stellar/transactions.js";
@@ -10,6 +12,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    assertTrustedOrigin(request, requireServerEnv("APP_ORIGIN", process.env));
     loadDemoConfig(process.env);
     const { publicKey } = (await request.json()) as { publicKey?: string };
     if (!publicKey) throw new Error("A Stellar public key is required");
