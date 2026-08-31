@@ -20,3 +20,4 @@ services:
       - ../../supabase/migrations/0005_demo_distributions.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0005.sql:ro,Z
       - ../../supabase/migrations/0006_issuer_challenges.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0006.sql:ro,Z
       - ../../supabase/migrations/0007_issuer_challenge_rate_limit.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0007.sql:ro,Z
+      - ../../supabase/migrations/0008_invoice_lifecycle.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0008.sql:ro,Z

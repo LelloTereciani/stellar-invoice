@@ -1,7 +1,7 @@
 import type { PendingInvoice } from "./transactions.js";
 
-type LedgerTransaction = { hash: string; memo: string; memo_type: "text"; source_account: string; successful: boolean };
-type LedgerOperation = { amount?: string; asset_code?: string; asset_issuer?: string; destination?: string; source_account?: string; transaction_successful?: boolean; type: string };
+export type LedgerTransaction = { hash: string; memo: string; memo_type: "text"; source_account: string; successful: boolean };
+export type LedgerOperation = { amount?: string; asset_code?: string; asset_issuer?: string; destination?: string; source_account?: string; transaction_successful?: boolean; type: string };
 
 export function verifyPayment(invoice: PendingInvoice, transaction: LedgerTransaction, operations: LedgerOperation[]) {
   if (!transaction.successful) return { reason: "Transaction was not successful", status: "rejected" as const };
