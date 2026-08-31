@@ -47,6 +47,7 @@ begin
     confirmed_at = confirm_invoice.confirmed_at
   where id = confirm_invoice.invoice_id
     and status = 'pending'
+    and due_at > now()
     and transaction_hash ~ '^[a-fA-F0-9]{64}$'
   returning * into confirmed_invoice;
 

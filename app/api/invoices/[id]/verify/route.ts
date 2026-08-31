@@ -10,6 +10,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const { transactionHash } = (await request.json()) as { transactionHash?: string };
     if (!transactionHash || !/^[a-f0-9]{64}$/i.test(transactionHash)) throw new Error("A valid transaction hash is required");
     const invoice = await findInvoice((await context.params).id);
+    if (invoice.status !== "pending") throw new Error("Invoice is not pending");
+    if (new Date(invoice.due_at) <= new Date()) throw new Error("Invoice has expired");
     const [transactionResponse, operationsResponse] = await Promise.all([
       fetch(`${STELLAR_TESTNET.horizonUrl}/transactions/${transactionHash}`),
       fetch(`${STELLAR_TESTNET.horizonUrl}/transactions/${transactionHash}/operations`),

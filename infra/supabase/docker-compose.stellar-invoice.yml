@@ -15,3 +15,4 @@ services:
       # Inicializa as tabelas do produto somente em um volume novo e persistente.
       - ../../supabase/migrations/0001_invoices.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0001.sql:ro,Z
       - ../../supabase/migrations/0002_policies.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0002.sql:ro,Z
+      - ../../supabase/migrations/0003_confirm_invoice_hardening.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0003.sql:ro,Z

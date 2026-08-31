@@ -16,5 +16,6 @@ using (
 );
 
 revoke all on public.invoices, public.rejected_payment_attempts from anon;
+revoke execute on function public.confirm_invoice(uuid, text, timestamptz) from public, anon, authenticated;
 grant select on public.invoices, public.rejected_payment_attempts to authenticated;
 grant execute on function public.confirm_invoice(uuid, text, timestamptz) to service_role;
