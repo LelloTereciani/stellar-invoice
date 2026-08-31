@@ -2,14 +2,14 @@ import { Keypair } from "@stellar/stellar-sdk";
 
 import { STELLAR_TESTNET } from "./stellar/network.js";
 
-type PublicEnvironment = {
+type PublicEnvironment = Record<string, string | undefined> & {
   NEXT_PUBLIC_STELLAR_ISSUER?: string;
   NEXT_PUBLIC_STELLAR_NETWORK?: string;
 };
 
 type ServerEnvironment = Record<string, string | undefined>;
 
-type DemoEnvironment = {
+type DemoEnvironment = Record<string, string | undefined> & {
   DEMO_MODE?: string;
   NEXT_PUBLIC_STELLAR_NETWORK?: string;
 };
@@ -48,6 +48,21 @@ export function loadDemoConfig(environment: DemoEnvironment): {
   }
 
   return { enabled: true, network: "testnet" };
+}
+
+export function loadDemoDistributionConfig(environment: ServerEnvironment & DemoEnvironment) {
+  loadDemoConfig(environment);
+  const distributionSecret = requireServerEnv("STELLAR_DISTRIBUTION_SECRET", environment);
+  const issuerPublicKey = requireServerEnv("NEXT_PUBLIC_STELLAR_ISSUER", environment);
+
+  try {
+    Keypair.fromSecret(distributionSecret);
+    Keypair.fromPublicKey(issuerPublicKey);
+  } catch {
+    throw new Error("Demo distribution configuration contains an invalid Stellar key");
+  }
+
+  return { distributionSecret, issuerPublicKey };
 }
 
 export function loadStellarConfig(environment: PublicEnvironment): StellarConfig {
