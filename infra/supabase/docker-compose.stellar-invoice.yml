@@ -1,0 +1,10 @@
+services:
+  api-gw:
+    # Keep the API gateway internal; the app or reverse proxy joins this network.
+    # Mantém o gateway interno; o app ou proxy reverso participa desta rede.
+    ports: !reset []
+
+  supavisor:
+    # Database and pooler must not be directly reachable from the internet.
+    # Banco e pooler não podem ser alcançáveis diretamente pela internet.
+    ports: !reset []
