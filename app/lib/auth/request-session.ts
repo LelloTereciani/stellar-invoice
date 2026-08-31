@@ -15,9 +15,3 @@ export function requireWalletSession(request: Request): WalletSession {
   if (!token) throw new Error("Wallet authentication is required");
   return verifyWalletSession(token, requireServerEnv("SESSION_SECRET", process.env));
 }
-
-export function assertInvoiceDebtor(session: WalletSession, debtorPublicKey: string): void {
-  if (session.walletPublicKey !== debtorPublicKey) {
-    throw new Error("The authenticated wallet is not the invoice debtor");
-  }
-}

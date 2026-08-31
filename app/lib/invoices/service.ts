@@ -4,6 +4,7 @@ import { requireServerEnv } from "../config.js";
 import { createInvoiceDraft, type InvoiceInput } from "./validation.js";
 
 type InvoiceRow = { id: string; amount: string; asset_issuer: string; confirmed_transaction_hash?: string | null; debtor_public_key: string; due_at: string; issuer_public_key: string; memo: string; status: "pending" | "confirmed" | "expired" };
+type RejectedAttemptRow = { observed_at: string; reason: string; transaction_hash: string };
 
 export function mapInvoiceRow(row: InvoiceRow) {
   return {
@@ -51,10 +52,41 @@ function serverDatabase() {
   );
 }
 
-export async function findInvoice(id: string) {
-  const { data, error } = await serverDatabase().from("invoices").select("*").eq("id", id).single();
+export async function listDebtorInvoices(debtorPublicKey: string) {
+  const { data, error } = await serverDatabase()
+    .from("invoices")
+    .select("*")
+    .eq("debtor_public_key", debtorPublicKey)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error("Invoices could not be loaded");
+  return (data as InvoiceRow[]).map(mapInvoiceRow);
+}
+
+export async function findDebtorInvoice(id: string, debtorPublicKey: string) {
+  const database = serverDatabase();
+  const { data, error } = await database
+    .from("invoices")
+    .select("*")
+    .eq("id", id)
+    .eq("debtor_public_key", debtorPublicKey)
+    .maybeSingle();
   if (error || !data) throw new Error("Invoice was not found");
-  return mapInvoiceRow(data as InvoiceRow);
+  const { data: attempts, error: attemptsError } = await database
+    .from("rejected_payment_attempts")
+    .select("transaction_hash,reason,observed_at")
+    .eq("invoice_id", id)
+    .order("observed_at", { ascending: false })
+    .limit(20);
+  if (attemptsError) throw new Error("Invoice attempts could not be loaded");
+  return {
+    ...mapInvoiceRow(data as InvoiceRow),
+    rejectedAttempts: ((attempts ?? []) as RejectedAttemptRow[]).map((attempt) => ({
+      observedAt: attempt.observed_at,
+      reason: attempt.reason,
+      transactionHash: attempt.transaction_hash,
+    })),
+  };
 }
 
 export async function confirmInvoice(id: string, transactionHash: string) {
