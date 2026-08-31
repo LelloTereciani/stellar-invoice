@@ -3,6 +3,21 @@ import { createClient } from "@supabase/supabase-js";
 import { requireServerEnv } from "../config.js";
 import { createInvoiceDraft, type InvoiceInput } from "./validation.js";
 
+type InvoiceRow = { id: string; amount: string; asset_issuer: string; debtor_public_key: string; due_at: string; issuer_public_key: string; memo: string; status: "pending" | "confirmed" | "expired" };
+
+export function mapInvoiceRow(row: InvoiceRow) {
+  return {
+    amount: row.amount,
+    assetIssuer: row.asset_issuer,
+    debtorPublicKey: row.debtor_public_key,
+    dueAt: row.due_at,
+    id: row.id,
+    issuerPublicKey: row.issuer_public_key,
+    memo: row.memo,
+    status: row.status,
+  };
+}
+
 export async function persistInvoice(input: InvoiceInput, issuerPublicKey: string) {
   const draft = createInvoiceDraft(input, issuerPublicKey);
   const database = createClient(
@@ -38,7 +53,7 @@ function serverDatabase() {
 export async function findInvoice(id: string) {
   const { data, error } = await serverDatabase().from("invoices").select("*").eq("id", id).single();
   if (error || !data) throw new Error("Invoice was not found");
-  return data;
+  return mapInvoiceRow(data as InvoiceRow);
 }
 
 export async function confirmInvoice(id: string, transactionHash: string) {
