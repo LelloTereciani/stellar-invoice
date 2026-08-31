@@ -26,3 +26,23 @@ export async function persistInvoice(input: InvoiceInput, issuerPublicKey: strin
   if (error) throw new Error("Could not persist invoice");
   return data;
 }
+
+function serverDatabase() {
+  return createClient(
+    requireServerEnv("SUPABASE_URL", process.env),
+    requireServerEnv("SUPABASE_SERVICE_ROLE_KEY", process.env),
+    { auth: { persistSession: false } },
+  );
+}
+
+export async function findInvoice(id: string) {
+  const { data, error } = await serverDatabase().from("invoices").select("*").eq("id", id).single();
+  if (error || !data) throw new Error("Invoice was not found");
+  return data;
+}
+
+export async function confirmInvoice(id: string, transactionHash: string) {
+  const { data, error } = await serverDatabase().rpc("confirm_invoice", { confirmed_at: new Date().toISOString(), invoice_id: id, transaction_hash: transactionHash });
+  if (error) throw new Error("Invoice could not be confirmed");
+  return data;
+}
