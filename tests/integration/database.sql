@@ -20,6 +20,7 @@ select public.test_assert(not has_function_privilege('anon', 'public.confirm_inv
 select public.test_assert(not has_function_privilege('authenticated', 'public.confirm_invoice(uuid,text,timestamptz)', 'EXECUTE'), 'authenticated cannot confirm invoices');
 select public.test_assert(has_function_privilege('service_role', 'public.confirm_invoice(uuid,text,timestamptz)', 'EXECUTE'), 'service role can confirm invoices');
 select public.test_assert(not has_function_privilege('authenticated', 'public.create_wallet_challenge(uuid,text,text,timestamptz)', 'EXECUTE'), 'authenticated cannot mint wallet challenges');
+select public.test_assert(not has_function_privilege('authenticated', 'public.reserve_demo_distribution(text,uuid,timestamptz)', 'EXECUTE'), 'authenticated cannot reserve demo distributions');
 select public.test_assert((select bool_and(relrowsecurity) from pg_class where oid in (
   'public.invoices'::regclass,
   'public.rejected_payment_attempts'::regclass,
@@ -80,5 +81,48 @@ select public.test_assert(
 reset role;
 
 select public.test_assert((select count(*) from public.invoices where confirmed_transaction_hash = repeat('a', 64)) = 1, 'a hash confirms one invoice');
+
+set local role service_role;
+select public.create_demo_session(
+  '10000000-0000-4000-8000-000000000001',
+  'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
+  repeat('1', 64), repeat('9', 64), now() + interval '10 minutes'
+);
+select public.test_assert(
+  (public.reserve_demo_distribution(repeat('1', 64), '20000000-0000-4000-8000-000000000001', now())).status = 'preparing',
+  'first demo request owns the preparation reservation'
+);
+select public.test_assert(
+  (public.store_demo_distribution_xdr('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', '20000000-0000-4000-8000-000000000001', repeat('A', 120), repeat('f', 64))).status = 'prepared',
+  'signed XDR and hash are persisted before broadcast'
+);
+select public.test_assert(
+  (public.reserve_demo_distribution(repeat('1', 64), '20000000-0000-4000-8000-000000000002', now())).transaction_hash = repeat('f', 64),
+  'retry recovers the same prepared transaction'
+);
+select public.test_assert((select count(*) from public.demo_distributions) = 1, 'retry does not create a second allowance');
+select public.test_assert(
+  (public.complete_demo_distribution('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', repeat('f', 64))).status = 'confirmed',
+  'prepared distribution completes'
+);
+select public.test_assert(
+  (public.complete_demo_distribution('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', repeat('f', 64))).status = 'confirmed',
+  'distribution completion is idempotent'
+);
+reset role;
+
+do $$
+declare rate_limit_enforced boolean := false;
+begin
+  perform public.create_demo_session('30000000-0000-4000-8000-000000000001', 'GBKMZ2CK7QANNLRLAX7BI32X7MTI7W542OLPNCZF46G2SEPWCDTEM2Q7', repeat('2', 64), repeat('8', 64), now() + interval '10 minutes');
+  perform public.create_demo_session('30000000-0000-4000-8000-000000000002', 'GACBLHJA3EWQE7VWPD3KV4TBO35QTP7OZJY5WX3CXLOZCOOMFNYKGT6I', repeat('3', 64), repeat('8', 64), now() + interval '10 minutes');
+  perform public.create_demo_session('30000000-0000-4000-8000-000000000003', 'GCTZDCUPFOELGFJXXAHCCOY3VANI5N3G2JWUMOAPKAPIZVLUMIWWXXFW', repeat('4', 64), repeat('8', 64), now() + interval '10 minutes');
+  begin
+    perform public.create_demo_session('30000000-0000-4000-8000-000000000004', 'GDDMM4RDODH6BW3AD6RSPMKHWRYQRXEFRPEOJIV7WZ6I2RXXCDUUVRKM', repeat('5', 64), repeat('8', 64), now() + interval '10 minutes');
+  exception when raise_exception then rate_limit_enforced := true;
+  end;
+  perform public.test_assert(rate_limit_enforced, 'fourth daily session from one origin is rejected');
+end;
+$$;
 
 rollback;

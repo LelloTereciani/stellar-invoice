@@ -1,7 +1,10 @@
 "use client";
 
 import { Horizon, Keypair, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Buffer } from "buffer";
 import { useState } from "react";
+
+import { buildDemoClaimMessage } from "../lib/demo/claim-message.js";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 const LOCAL_KEY = "stellar-invoice-demo-customer-secret";
@@ -42,8 +45,10 @@ export function DemoStarter() {
       transaction.sign(wallet);
       await new Horizon.Server(HORIZON_URL).submitTransaction(transaction);
 
+      const claimMessage = buildDemoClaimMessage(wallet.publicKey(), provision.sessionId);
+      const signedClaim = wallet.sign(Buffer.from(claimMessage)).toString("base64");
       const distribution = await fetch("/api/demo/distribute", {
-        body: JSON.stringify({ sessionId: provision.sessionId }),
+        body: JSON.stringify({ claimMessage, sessionId: provision.sessionId, signedClaim }),
         headers: { "content-type": "application/json" },
         method: "POST",
       });

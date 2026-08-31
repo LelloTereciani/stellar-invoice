@@ -5,6 +5,7 @@ import { loadDemoConfig, loadStellarConfig } from "../../../lib/config.js";
 import { requireServerEnv } from "../../../lib/config.js";
 import { assertTrustedOrigin } from "../../../lib/auth/request-origin.js";
 import { createPersistentDemoSession } from "../../../lib/demo/persistent-session.js";
+import { demoRequestFingerprint } from "../../../lib/demo/request-fingerprint.js";
 import { fundDemoWallet } from "../../../lib/demo/provisioning.js";
 import { buildTrustlineXdr } from "../../../lib/stellar/transactions.js";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     Keypair.fromPublicKey(publicKey);
 
     const stellar = loadStellarConfig(process.env);
-    const sessionId = await createPersistentDemoSession(publicKey);
+    const sessionId = await createPersistentDemoSession(publicKey, demoRequestFingerprint(request, requireServerEnv("SESSION_SECRET", process.env)));
     await fundDemoWallet(publicKey);
     const trustlineXdr = await buildTrustlineXdr(publicKey, stellar.issuerPublicKey);
 
