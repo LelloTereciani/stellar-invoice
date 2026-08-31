@@ -20,6 +20,8 @@ services:
   caddy:
     image: caddy:2.10-alpine
     restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
     depends_on:
       app:
         condition: service_healthy
