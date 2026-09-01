@@ -137,6 +137,7 @@ select public.create_demo_session(
   'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
   repeat('1', 64), repeat('9', 64), now() + interval '10 minutes'
 );
+select public.acquire_demo_distribution_lock('20000000-0000-4000-8000-000000000001', now());
 select public.test_assert(
   (public.reserve_demo_distribution(repeat('1', 64), '20000000-0000-4000-8000-000000000001', now())).status = 'preparing',
   'first demo request owns the preparation reservation'
@@ -146,12 +147,14 @@ select public.create_demo_session(
   'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
   repeat('e', 64), repeat('7', 64), now() + interval '10 minutes'
 );
+select public.release_demo_distribution_lock('20000000-0000-4000-8000-000000000001');
+select public.acquire_demo_distribution_lock('20000000-0000-4000-8000-000000000004', now());
 select public.test_assert(
-  (public.reserve_demo_distribution(repeat('e', 64), '20000000-0000-4000-8000-000000000004', now())).status = 'preparing',
-  'a refreshed session recovers a preparing distribution'
+  (public.reserve_demo_distribution(repeat('e', 64), '20000000-0000-4000-8000-000000000004', now())).attempt_key = '20000000-0000-4000-8000-000000000004',
+  'a refreshed session takes ownership of a preparing distribution'
 );
 select public.test_assert(
-  (public.store_demo_distribution_xdr('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', '20000000-0000-4000-8000-000000000001', repeat('A', 120), repeat('f', 64))).status = 'prepared',
+  (public.store_demo_distribution_xdr('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', '20000000-0000-4000-8000-000000000004', repeat('A', 120), repeat('f', 64))).status = 'prepared',
   'signed XDR and hash are persisted before broadcast'
 );
 select public.test_assert(
@@ -167,6 +170,7 @@ select public.test_assert(
   (public.reserve_demo_distribution(repeat('a', 64), '20000000-0000-4000-8000-000000000003', now())).transaction_hash = repeat('f', 64),
   'a refreshed session recovers the same unconfirmed distribution'
 );
+select public.release_demo_distribution_lock('20000000-0000-4000-8000-000000000004');
 select public.test_assert((select count(*) from public.demo_distributions) = 1, 'retry does not create a second allowance');
 select public.test_assert(
   (public.reset_expired_demo_distribution('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', repeat('f', 64), '20000000-0000-4000-8000-000000000002')).status = 'preparing',

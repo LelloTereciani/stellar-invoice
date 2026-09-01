@@ -31,3 +31,35 @@ end; $$;
 
 revoke execute on function public.create_demo_session(uuid, text, text, text, timestamptz) from public, anon, authenticated;
 grant execute on function public.create_demo_session(uuid, text, text, text, timestamptz) to service_role;
+
+create or replace function public.reserve_demo_distribution(session_token_hash text, distribution_attempt_key uuid, requested_at timestamptz)
+returns public.demo_distributions language plpgsql security definer set search_path = '' as $$
+declare session_record public.demo_sessions;
+declare distribution_record public.demo_distributions;
+declare mutex public.demo_distribution_mutex;
+begin
+  select * into session_record from public.demo_sessions where token_hash = session_token_hash for update;
+  if session_record.id is null then raise exception 'Demo session is invalid or expired'; end if;
+  select * into distribution_record from public.demo_distributions where customer_public_key = session_record.customer_public_key for update;
+  if distribution_record.id is not null then
+    if distribution_record.status = 'preparing' and distribution_record.signed_xdr is null
+      and distribution_record.attempt_key is distinct from distribution_attempt_key then
+      select * into mutex from public.demo_distribution_mutex where singleton = true for update;
+      if mutex.owner_key is distinct from distribution_attempt_key or mutex.lease_expires_at is null
+        or mutex.lease_expires_at <= requested_at then
+        raise exception 'Demo distribution recovery does not own the active lock';
+      end if;
+      update public.demo_distributions set attempt_key = distribution_attempt_key, updated_at = requested_at
+      where id = distribution_record.id returning * into distribution_record;
+    end if;
+    return distribution_record;
+  end if;
+  if session_record.consumed_at is not null or session_record.expires_at <= requested_at then raise exception 'Demo session is invalid or expired'; end if;
+  update public.demo_sessions set consumed_at = requested_at where id = session_record.id;
+  insert into public.demo_distributions(customer_public_key, status, attempt_key, updated_at)
+  values (session_record.customer_public_key, 'preparing', distribution_attempt_key, requested_at) returning * into distribution_record;
+  return distribution_record;
+end; $$;
+
+revoke execute on function public.reserve_demo_distribution(text, uuid, timestamptz) from public, anon, authenticated;
+grant execute on function public.reserve_demo_distribution(text, uuid, timestamptz) to service_role;
