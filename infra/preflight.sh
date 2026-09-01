@@ -83,7 +83,7 @@ if [ "$deployment_target" = easypanel ]; then
   fixed_names=$(printf '%s' "$topology" | jq -r '.services | to_entries[] | select(.value.container_name != null) | .key')
   [ -z "$fixed_names" ] || { echo "EasyPanel services must not fix container names: $fixed_names" >&2; exit 1; }
   migration_count=$(printf '%s' "$topology" | jq '[.services.db.volumes[] | select(.target | test("/zzz-stellar-invoice-[0-9]{4}\\.sql$"))] | length')
-  [ "$migration_count" -eq 15 ] || { echo "EasyPanel topology must mount all 15 application migrations" >&2; exit 1; }
+  [ "$migration_count" -eq 16 ] || { echo "EasyPanel topology must mount all 16 application migrations" >&2; exit 1; }
 
   echo "EasyPanel deployment preflight passed; route the primary HTTPS domain to app:3000."
   exit 0

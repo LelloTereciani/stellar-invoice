@@ -22,9 +22,9 @@ The generic VPS files still include Caddy, but EasyPanel must use its own proxy.
 
 Os arquivos de VPS genérica continuam incluindo Caddy, mas o EasyPanel deve usar seu próprio proxy. O Compose raiz para EasyPanel não contém Caddy, nomes fixos de contêiner nem portas publicadas no host.
 
-All fifteen project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; back up first and apply only reviewed new SQL migrations during a controlled maintenance window.
+All sixteen project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; back up first and apply only reviewed new SQL migrations during a controlled maintenance window.
 
-As migrations do projeto são montadas pela sobreposição do StellarInvoice e executam quando o Postgres inicializa um volume de dados **novo**. Volumes existentes não são alterados automaticamente na inicialização; aplique migrações SQL revisadas explicitamente em uma janela de manutenção controlada.
+As dezesseis migrations do projeto são montadas pela sobreposição do StellarInvoice e executam quando o Postgres inicializa um volume de dados **novo**. Volumes existentes não são alterados automaticamente na inicialização; aplique migrações SQL revisadas explicitamente em uma janela de manutenção controlada.
 
 Do not use the defaults in `.env.example` to start a public instance. The EasyPanel configuration is intentionally performed by the user; this repository does not contain live credentials.
 

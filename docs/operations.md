@@ -26,4 +26,18 @@ Pin the previously known-good Git commit in EasyPanel and redeploy it. Do not ro
 
 ## New and existing database volumes
 
-All fifteen product migrations are mounted into the official Supabase initialization directory and run in order on a new volume. Existing volumes do not replay init scripts: apply only the newly reviewed migration files during a maintenance window, verify the GitHub `database` job, back up first, and never delete the volume as an upgrade mechanism.
+All sixteen product migrations are mounted into the official Supabase initialization directory and run in order on a new volume. Existing volumes do not replay init scripts: apply only the newly reviewed migration files during a maintenance window, verify the GitHub `database` job, back up first, and never delete the volume as an upgrade mechanism.
+
+For an existing EasyPanel database created before migration `0016`, first confirm a recent validated backup, deploy the reviewed Compose so the migration is mounted, then open the private `db` service terminal and run:
+
+```sh
+psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --file /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0016.sql
+```
+
+The command is idempotent because the migration replaces the existing function without deleting data. Do not delete or recreate `postgres-data` to apply it. Confirm the installed definition with:
+
+```sh
+psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --tuples-only --command "select pg_get_functiondef('public.create_demo_session(uuid,text,text,text,timestamptz)'::regprocedure) like '%>= 10%';"
+```
+
+The result must be `t` before retesting the public demo.

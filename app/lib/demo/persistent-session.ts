@@ -8,6 +8,35 @@ const tokenHash = (token: string) => createHash("sha256").update(token).digest("
 type DistributionRow = { attempt_key: string | null; customer_public_key: string; invoice_id: string | null; signed_xdr: string | null; status: "preparing" | "prepared" | "confirmed"; transaction_hash: string | null };
 export type DemoDistribution = { attemptKey: string | null; customerPublicKey: string; invoiceId: string | null; signedXdr: string | null; status: "preparing" | "prepared" | "confirmed"; transactionHash: string | null };
 
+export class DemoNotProvisionedError extends Error {
+  readonly code = "DEMO_NOT_PROVISIONED";
+}
+
+export class DemoSessionError extends Error {
+  constructor(
+    readonly code: "DEMO_ALREADY_PROVISIONED" | "DEMO_RATE_LIMIT" | "DEMO_SESSION_FAILED",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export function mapDemoSessionError(error: { message?: string }): DemoSessionError {
+  if (error.message?.includes("Demo wallet has already received its BRLT allowance")) {
+    return new DemoSessionError(
+      "DEMO_ALREADY_PROVISIONED",
+      "Esta carteira demo já recebeu BRLT. Use Continuar demonstração.",
+    );
+  }
+  if (error.message?.includes("Demo request limit exceeded") || error.message?.includes("Daily demo session limit exceeded")) {
+    return new DemoSessionError(
+      "DEMO_RATE_LIMIT",
+      "O limite diário de demonstrações foi atingido. Tente novamente após a renovação do limite.",
+    );
+  }
+  return new DemoSessionError("DEMO_SESSION_FAILED", "A sessão demo não pôde ser criada com segurança.");
+}
+
 function mapDistribution(row: DistributionRow): DemoDistribution {
   return { attemptKey: row.attempt_key, customerPublicKey: row.customer_public_key, invoiceId: row.invoice_id, signedXdr: row.signed_xdr, status: row.status, transactionHash: row.transaction_hash };
 }
@@ -25,7 +54,7 @@ export async function createPersistentDemoSession(customerPublicKey: string, req
     session_request_fingerprint: requestFingerprint,
     session_token_hash: tokenHash(token),
   });
-  if (error) throw new Error("Demo session limit was reached or this wallet already received BRLT");
+  if (error) throw mapDemoSessionError(error);
   return token;
 }
 
@@ -66,6 +95,9 @@ export async function ensureDemoInvoice(customerPublicKey: string, issuerPublicK
     demo_issuer_public_key: issuerPublicKey,
     demo_memo: randomUUID().replaceAll("-", "").slice(0, 28),
   });
+  if (error?.message.includes("Demo distribution is not confirmed")) {
+    throw new DemoNotProvisionedError("Esta carteira demo ainda não recebeu BRLT fictício.");
+  }
   if (error || !data) throw new Error("Demo invoice could not be created");
   return data as { id: string; memo: string; status: "pending" };
 }

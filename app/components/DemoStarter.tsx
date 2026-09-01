@@ -2,10 +2,10 @@
 
 import { Horizon, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
 import { Buffer } from "buffer";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { buildDemoClaimMessage } from "../lib/demo/claim-message.js";
-import { authenticateDemoWallet, getOrCreateDemoWallet } from "../lib/stellar/demo-wallet-client.js";
+import { authenticateDemoWallet, getOrCreateDemoWallet, readDemoWallet, resumeDemoWallet } from "../lib/stellar/demo-wallet-client.js";
 import { reviewTrustlineXdr } from "../lib/stellar/transactions.js";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
@@ -19,11 +19,31 @@ type ProvisionResponse = {
 export function DemoStarter() {
   const [message, setMessage] = useState("Crie uma demonstração Testnet com BRLT fictício.");
   const [publicKey, setPublicKey] = useState<string>();
+  const [canResume, setCanResume] = useState(false);
+
+  useEffect(() => {
+    const wallet = readDemoWallet();
+    if (!wallet) return;
+    setCanResume(true);
+    setPublicKey(wallet.publicKey());
+    setMessage("Uma carteira demo existente foi encontrada neste navegador.");
+  }, []);
 
   async function startDemo() {
     try {
-      setMessage("Criando carteira e solicitando XLM de teste...");
-      const wallet = getOrCreateDemoWallet();
+      const existingWallet = readDemoWallet();
+      if (existingWallet) {
+        setMessage("Autenticando a carteira demo e recuperando sua fatura...");
+        const invoiceId = await resumeDemoWallet(existingWallet);
+        if (invoiceId) {
+          window.location.assign(`/invoices/${encodeURIComponent(invoiceId)}`);
+          return;
+        }
+        setMessage("Retomando o provisionamento inicial desta carteira demo...");
+      }
+
+      const wallet = existingWallet ?? getOrCreateDemoWallet();
+      if (!existingWallet) setMessage("Criando carteira e solicitando XLM de teste...");
       setPublicKey(wallet.publicKey());
       const response = await fetch("/api/demo/provision", {
         body: JSON.stringify({ publicKey: wallet.publicKey() }),
@@ -60,7 +80,7 @@ export function DemoStarter() {
 
   return (
     <section>
-      <button type="button" onClick={startDemo}>Iniciar demonstração automática</button>
+      <button type="button" onClick={startDemo}>{canResume ? "Continuar demonstração" : "Iniciar demonstração automática"}</button>
       <p>{message}</p>
       {publicKey ? <code>{publicKey}</code> : null}
     </section>

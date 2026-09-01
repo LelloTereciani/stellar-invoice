@@ -28,3 +28,4 @@ services:
       - ../../supabase/migrations/0013_invoice_payment_integrity.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0013.sql:ro,Z
       - ../../supabase/migrations/0014_prepared_invoice_payments.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0014.sql:ro,Z
       - ../../supabase/migrations/0015_demo_distribution_serialization.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0015.sql:ro,Z
+      - ../../supabase/migrations/0016_demo_rate_limit_increase.sql:/docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0016.sql:ro,Z

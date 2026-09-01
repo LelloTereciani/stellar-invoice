@@ -31,6 +31,13 @@ export async function POST(request: Request) {
       trustlineXdr,
     });
   } catch (error: unknown) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Demo provisioning failed" }, { status: 400 });
+    const code = error instanceof Error && "code" in error && typeof error.code === "string"
+      ? error.code
+      : undefined;
+    const status = code === "DEMO_ALREADY_PROVISIONED" ? 409 : code === "DEMO_RATE_LIMIT" ? 429 : 400;
+    return NextResponse.json({
+      ...(code ? { code } : {}),
+      error: error instanceof Error ? error.message : "Demo provisioning failed",
+    }, { status });
   }
 }

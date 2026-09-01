@@ -6,6 +6,7 @@ import {
   getOrCreateDemoWallet,
   payInvoiceWithDemoWallet,
   readDemoWallet,
+  resumeDemoWallet,
 } from "../../app/lib/stellar/demo-wallet-client.js";
 
 function storage() {
@@ -39,6 +40,23 @@ describe("disposable browser demo wallet", () => {
 
     await expect(authenticateDemoWallet(wallet, fetcher)).resolves.toBe(wallet.publicKey());
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("allows initial provisioning when the stored demo wallet has no BRLT distribution", async () => {
+    const wallet = Keypair.random();
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        expiresAt: "2030-01-01T00:05:00.000Z",
+        id: "challenge-id",
+        message: "authenticate me",
+      })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ authenticated: true })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: "DEMO_NOT_PROVISIONED",
+        error: "Esta carteira demo ainda não recebeu BRLT fictício.",
+      }), { status: 409 }));
+
+    await expect(resumeDemoWallet(wallet, fetcher)).resolves.toBeUndefined();
   });
 
   it("reviews, locally signs, and submits only the exact invoice payment", async () => {

@@ -61,6 +61,6 @@ fixed_names=$(printf '%s' "$topology" | jq -r '.services | to_entries[] | select
 [ -z "$fixed_names" ] || { echo "EasyPanel Compose must not fix container names: $fixed_names" >&2; exit 1; }
 
 migration_count=$(printf '%s' "$topology" | jq '[.services.db.volumes[] | select(.target | test("/zzz-stellar-invoice-[0-9]{4}\\.sql$"))] | length')
-[ "$migration_count" -eq 15 ] || { echo "Expected all 15 application migrations, found $migration_count" >&2; exit 1; }
+[ "$migration_count" -eq 16 ] || { echo "Expected all 16 application migrations, found $migration_count" >&2; exit 1; }
 
 echo "Single-file EasyPanel topology passed."

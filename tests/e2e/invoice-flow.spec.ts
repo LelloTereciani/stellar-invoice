@@ -16,6 +16,88 @@ test("renders the Testnet portal without horizontal overflow on desktop and mobi
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
+test("resumes an existing browser demo wallet without requesting another BRLT allowance", async ({ page }) => {
+  const wallet = Keypair.random();
+  const invoiceId = "00000000-0000-4000-8000-000000000123";
+
+  await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), {
+    key: DEMO_STORAGE_KEY,
+    secret: wallet.secret(),
+  });
+  await page.route(/\/api\/auth\/challenge$/, async (route) => route.fulfill({
+    body: JSON.stringify({
+      expiresAt: "2030-01-01T00:05:00.000Z",
+      id: "resume-challenge",
+      message: "resume this demo wallet",
+    }),
+    contentType: "application/json",
+  }));
+  await page.route(/\/api\/auth\/verify$/, async (route) => route.fulfill({
+    body: JSON.stringify({ authenticated: true, walletPublicKey: wallet.publicKey() }),
+    contentType: "application/json",
+  }));
+  await page.route(/\/api\/demo\/resume$/, async (route) => route.fulfill({
+    body: JSON.stringify({ invoiceId }),
+    contentType: "application/json",
+  }));
+  await page.route(new RegExp(`/api/invoices/${invoiceId}$`), async (route) => route.fulfill({
+    body: JSON.stringify({ error: "Authentication refresh in progress" }),
+    contentType: "application/json",
+    status: 401,
+  }));
+
+  await page.goto("/");
+  const continueButton = page.getByRole("button", { name: "Continuar demonstração" });
+  await expect(continueButton).toBeVisible();
+  await continueButton.click();
+
+  await expect(page).toHaveURL(new RegExp(`/invoices/${invoiceId}$`));
+});
+
+test("reuses a stored wallet that was saved before initial demo provisioning completed", async ({ page }) => {
+  const wallet = Keypair.random();
+  let provisionRequests = 0;
+
+  await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), {
+    key: DEMO_STORAGE_KEY,
+    secret: wallet.secret(),
+  });
+  await page.route(/\/api\/auth\/challenge$/, async (route) => route.fulfill({
+    body: JSON.stringify({
+      expiresAt: "2030-01-01T00:05:00.000Z",
+      id: "resume-challenge",
+      message: "resume this demo wallet",
+    }),
+    contentType: "application/json",
+  }));
+  await page.route(/\/api\/auth\/verify$/, async (route) => route.fulfill({
+    body: JSON.stringify({ authenticated: true, walletPublicKey: wallet.publicKey() }),
+    contentType: "application/json",
+  }));
+  await page.route(/\/api\/demo\/resume$/, async (route) => route.fulfill({
+    body: JSON.stringify({
+      code: "DEMO_NOT_PROVISIONED",
+      error: "Esta carteira demo ainda não recebeu BRLT fictício.",
+    }),
+    contentType: "application/json",
+    status: 409,
+  }));
+  await page.route(/\/api\/demo\/provision$/, async (route) => {
+    provisionRequests += 1;
+    await route.fulfill({
+      body: JSON.stringify({ error: "Provisionamento inicial retomado pelo teste." }),
+      contentType: "application/json",
+      status: 400,
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Continuar demonstração" }).click();
+
+  await expect.poll(() => provisionRequests).toBe(1);
+  await expect(page.getByText("Provisionamento inicial retomado pelo teste.")).toBeVisible();
+});
+
 test("reviews and signs the exact demo invoice in the browser before verification", async ({ page }) => {
   const wallet = Keypair.random();
   const issuer = Keypair.random().publicKey();

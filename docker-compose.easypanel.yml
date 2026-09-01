@@ -347,6 +347,13 @@ services:
         source: ./supabase/migrations/0015_demo_distribution_serialization.sql
         target: /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0015.sql
         type: bind
+      - bind:
+          create_host_path: true
+          selinux: Z
+        read_only: true
+        source: ./supabase/migrations/0016_demo_rate_limit_increase.sql
+        target: /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0016.sql
+        type: bind
   functions:
     command:
       - start

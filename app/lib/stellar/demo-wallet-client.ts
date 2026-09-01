@@ -61,6 +61,15 @@ export async function authenticateDemoWallet(wallet: Keypair, fetcher: Fetcher =
   return walletPublicKey;
 }
 
+export async function resumeDemoWallet(wallet: Keypair, fetcher: Fetcher = fetch): Promise<string | undefined> {
+  await authenticateDemoWallet(wallet, fetcher);
+  const response = await fetcher("/api/demo/resume", { method: "POST" });
+  const result = (await response.json()) as { code?: string; error?: string; invoiceId?: string };
+  if (response.status === 409 && result.code === "DEMO_NOT_PROVISIONED") return undefined;
+  if (!response.ok || !result.invoiceId) throw new Error(result.error || "Demo invoice could not be recovered");
+  return result.invoiceId;
+}
+
 async function submitSignedXdr(signedXdr: string): Promise<{ hash: string }> {
   const transaction = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
   const result = await new Horizon.Server(STELLAR_TESTNET.horizonUrl).submitTransaction(transaction);
