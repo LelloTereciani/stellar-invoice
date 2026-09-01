@@ -1,36 +1,59 @@
 # Security audit — StellarInvoice
 
-**Auditor:** GPT-5.6 Sol, high reasoning.  
-**Baseline reviewed:** `e4638d7`.  
-**Decision:** deployment blocked until every blocking finding is remediated and independently revalidated.
+**Independent reviewer:** GPT-5.6 Sol, high reasoning  
+**Audited code baseline:** `fafd712d524cdc4c2fddae27625e92097adbc3bb`  
+**Audit date:** 2026-09-01  
+**Decision:** **DEPLOY-READY** for EasyPanel, Stellar Testnet and fictitious BRLT. No Critical or High finding remains.
 
-## Findings and remediation record
+This decision covers repository readiness. It does not claim that the VPS is already deployed: public TLS, attached persistent volumes, scheduled backups and a restore executed in the VPS environment remain post-deployment operational evidence.
 
-| Plan task | Audit status | Evidence | Required remediation before approval |
-| --- | --- | --- | --- |
-| 1 — Configuration | Partial | Testnet guard and key validation exist. | Validate the complete runtime contract and bootstrap identity at startup; add asset and Horizon tests. |
-| 2 — Supabase/schema | Blocked | Tables, RLS skeleton and private-port overlay exist. | Verify effective SQL privileges/RLS in real Postgres, provide wallet identity/JWT path, insert rejected attempts and connect app to the private network. |
-| 3 — Issuer bootstrap | Partial | Separate Testnet issuer/distributor, Friendbot, trustline and local `0600` secret file. | Persist public configuration safely, make partial issuance idempotent and record two-run evidence. |
-| 3A — Demo | Blocked | Browser-local seed, local trustline signature and fixed BRLT distribution exist. | Replace process memory with durable atomic sessions, wallet/IP limits, daily caps, reserve checks and proof of wallet possession. |
-| 4 — Issuer API | Blocked | One-use signature challenge and server-owned invoice fields exist. | Replace raw in-memory UUID challenge with domain-bound Testnet authentication, durable nonce/session, CSRF/origin protections and rate limiting. |
-| 5 — Customer payment | Blocked | Testnet XDR builders and Freighter connection exist. | Implement decoded transaction review, debtor enforcement, signing/submission UX and browser tests. |
-| 6 — Ledger verification | Blocked | Horizon lookup and exact-field verifier exist. | Add row mapper, status/expiry/idempotency/rejected-attempt handling and route integration tests. |
-| 7 — Invoice panel | Blocked | Minimal home page only. | Implement authenticated read API, invoice detail/status/history, explorer-link validation and E2E evidence. |
-| 8 — Production operation | Blocked | Standalone Dockerfile and hidden Supabase ports exist. | Add unified app/Caddy TLS topology, non-root health-checked runtime, backups/restore/rollback documentation and deployment tests. |
+Esta decisão cobre a prontidão do repositório. Ela não afirma que a VPS já está implantada: TLS público, volumes persistentes anexados, backups agendados e restauração executada no ambiente da VPS continuam sendo evidências operacionais pós-deploy.
 
-## Critical findings
+## Task-by-task decision
 
-1. **C-01 — RPC privilege bypass.** `confirm_invoice` is `SECURITY DEFINER`; PostgreSQL grants function execution to `PUBLIC` by default. The follow-up migration explicitly revokes it from `PUBLIC`, `anon` and `authenticated`, granting only `service_role`. Real Postgres privilege proof remains required.
-2. **C-02 — Failed ledger transaction confirmation.** Verification now rejects transactions or operations marked unsuccessful and validates an operation-level source when Horizon provides it. Remaining cases require integration tests.
+| Implementation task | Status | Audited evidence |
+| --- | --- | --- |
+| 1 — Configuration | Approved | Immutable Testnet configuration, key validation, server-only secrets and Node.js 22 runtime. |
+| 2 — Supabase/schema | Approved | Fifteen migrations; effective RLS, GRANT/REVOKE and RPC tests in PostgreSQL; real PostgREST exact-decimal proof. |
+| 3 — Issuer bootstrap | Approved with documented deviation | Separate issuer/distributor, Friendbot, idempotent bootstrap and ignored `0600` secrets file. Public configuration is environment-backed instead of stored in a database. |
+| 3A — Demo | Approved | Browser-only customer seed, persistent limits, proof of possession, BRLT reserve, global distributor mutex, expired-XDR recovery and real Testnet evidence. |
+| 4 — Issuer auth/API | Approved | Origin/Testnet/payload-bound v2 challenge, durable one-use nonce, expiry and rate limit. |
+| 5 — Trustline/payment | Approved | Review before and after signing; fee, sequence, timebounds, trustline limit, source, destination, asset, amount and memo validation. |
+| 6 — Ledger verification | Approved | Horizon `payment.to`, successful transaction/operation, exact fields, ledger timestamp validity and retry idempotency. |
+| 7 — Customer panel/explorer | Approved for customer/demo flow | Responsive states, exact invoice data, history, strictly validated Explorer link and Playwright retry proof without a second payment. |
+| 8 — Operations | Approved in code | Non-root image, only Caddy exposed, nonce CSP, preflight, external backup path, ACL/RLS/RPC restore proof and rollback documentation. |
 
-## High findings
+## Closed blocking findings
 
-- Database rows use snake_case while the verifier expected camelCase; introduce a validated mapper and route-level test.
-- Demo distribution and issuer challenges are unbounded process-local memory maps; they are not safe across replicas or against abuse.
-- Expiry, rejected-attempt recording and idempotent confirmation are incomplete. The follow-up migration adds an expiry guard; lifecycle work remains.
-- RLS lacks a verified wallet identity issuance and issuer-read path.
-- No production app/Caddy topology, TLS, backup/restore drill, rollback path, health checks, or browser E2E evidence exists.
+- XDR review now enforces fee `100`, positive sequence, short timebounds and the maximum trustline limit.
+- A ledger payment observed before the due time can confirm after the due time; the ledger timestamp is retained.
+- A retry after broadcast reuses the stored transaction hash/XDR and does not request another signature.
+- PostgreSQL `numeric(20,7)` reaches the application through an exact text projection proven against PostgREST.
+- Demo distribution serializes sequence allocation and can recover an expired prepared XDR.
+- Preflight checks required Supabase/application secrets and exact `APP_ORIGIN=https://APP_DOMAIN`.
+- Explorer links accept only lowercase 64-character transaction hashes.
+- Production script CSP has a per-request nonce and no `unsafe-inline`.
+- Backups reject failed or empty dumps, preserve ACLs and pass isolated data/RLS/permission restore checks.
+- Payment verification uses the real Horizon payment destination field, `to`.
 
-## Approval gates
+## Residual non-blocking findings
 
-The release is approved only after all task rows are marked complete, the critical/high findings are independently rechecked against the final commit, the real Postgres privilege/RLS tests pass, and the stack exposes only one HTTPS entrypoint.
+| Severity | Finding | Follow-up |
+| --- | --- | --- |
+| Medium | Administrative invoice validation does not explicitly cap amounts at Stellar's representable maximum. An extreme value can be stored but not paid. | Add a product-level maximum before accepting non-demo production issuers. |
+| Medium | The authenticated verification route has no route-specific throttle; repeated calls can consume Horizon/database capacity. | Add distributed rate limiting before exposing the service beyond the controlled portfolio demo. |
+| Medium | The functional specification includes issuer list/create screens; this delivery provides the secure issuer API and complete customer/demo journey, not those issuer screens. | Implement when issuer-facing browser operation enters scope. |
+| Low | The demo mutex lease is fixed at two minutes; extreme Horizon latency may create a recoverable sequence collision. | Monitor and tune the lease after VPS observations. |
+| Low | CI actions and container images use release versions/tags rather than immutable commit/digest pins. | Pin digests during supply-chain hardening. |
+| Low | Preflight could repeat the runtime checks for Testnet name and issuer public-key format. | Add defense-in-depth validation in a maintenance pass. |
+
+## Verification evidence
+
+- Local: TypeScript, 24 test files / 55 tests, production build, 2 Playwright journeys and production dependency audit passed.
+- GitHub Actions: [run 33465760020](https://github.com/LelloTereciani/stellar-invoice/actions/runs/33465760020) passed both `application` and `database` jobs, including ShellCheck, operational scripts and backup failure propagation.
+- Database CI: all fifteen migrations, RLS/ACL/RPC lifecycle, real PostgREST decimal JSON and isolated backup/restore.
+- Production image CI: only Caddy publishes host ports, the application runs as `nextjs`, and the response has the strict CSP.
+- Public Testnet: the trustline, distribution and payment hashes are recorded in [testnet-evidence.md](testnet-evidence.md).
+- Secret hygiene: no tracked seed/private key; ignored `demo-wallet.json` remains mode `0600`.
+
+This automated independent review is not a substitute for an external organizational audit or a penetration test of the published VPS.
