@@ -116,4 +116,10 @@ jobs:
           infra/backup.sh
           backup=$(find "$BACKUP_DIR" -type f -name 'stellar-invoice-*.sql.gz' -print -quit)
           test -n "$backup"
-          infra/restore-check.sh "$backup" postgrest-exact
+          if ! restore_output=$(infra/restore-check.sh "$backup" postgrest-exact 2>&1); then
+            printf '%s\n' "$restore_output"
+            annotation=$(printf '%s\n' "$restore_output" | tail -n 30 | sed 's/%/%25/g; s/\r/%0D/g' | awk 'BEGIN { ORS="%0A" } { print }')
+            echo "::error file=infra/restore-check.sh::$annotation"
+            exit 1
+          fi
+          printf '%s\n' "$restore_output"
