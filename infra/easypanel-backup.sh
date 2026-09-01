@@ -21,8 +21,10 @@ mkdir -p "$backup_dir"
 create_backup() {
   timestamp=$(date -u +%Y%m%dT%H%M%SZ)
   destination="$backup_dir/stellar-invoice-$timestamp.sql.gz"
-  temporary_dump=$(mktemp "$backup_dir/.stellar-invoice-XXXXXX.sql")
-  temporary_archive=$(mktemp "$backup_dir/.stellar-invoice-XXXXXX.sql.gz")
+  # BusyBox (Alpine) requires the six-X template at the very end of the path.
+  # O BusyBox (Alpine) exige o modelo de seis X no final exato do caminho.
+  temporary_dump=$(mktemp "$backup_dir/.stellar-invoice-sql.XXXXXX")
+  temporary_archive=$(mktemp "$backup_dir/.stellar-invoice-gzip.XXXXXX")
   backup_complete=false
 
   cleanup_backup() {

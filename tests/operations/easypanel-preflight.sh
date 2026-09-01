@@ -23,7 +23,11 @@ sed \
   "$project_root/infra/supabase/.env.example" "$project_root/infra/.env.example" > "$environment_file"
 
 {
+  # EasyPanel expands this literal macro after the primary domain is assigned.
+  # O EasyPanel expande esta macro literal depois que o dominio primario e atribuido.
+  # shellcheck disable=SC2016
   printf '%s\n' 'APP_DOMAIN=$(PRIMARY_DOMAIN)'
+  # shellcheck disable=SC2016
   printf '%s\n' 'APP_ORIGIN=https://$(PRIMARY_DOMAIN)'
   printf '%s\n' 'SESSION_SECRET=integration-session-secret-at-least-32-characters'
   printf '%s\n' 'NEXT_PUBLIC_STELLAR_ISSUER=GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF'

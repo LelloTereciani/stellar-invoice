@@ -1,3 +1,4 @@
 #!/bin/sh
 # Simulate a failed database client. / Simula uma falha do cliente do banco.
+[ -z "${FAILURE_STUB_CALLED_FILE:-}" ] || : > "$FAILURE_STUB_CALLED_FILE"
 exit 42
