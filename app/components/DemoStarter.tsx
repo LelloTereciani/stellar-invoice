@@ -2,7 +2,7 @@
 
 import { Horizon, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
 import { Buffer } from "buffer";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { buildDemoClaimMessage } from "../lib/demo/claim-message.js";
 import { authenticateDemoWallet, getOrCreateDemoWallet, readDemoWallet, resumeDemoWallet } from "../lib/stellar/demo-wallet-client.js";
@@ -20,6 +20,8 @@ export function DemoStarter() {
   const [message, setMessage] = useState("Crie uma demonstração Testnet com BRLT fictício.");
   const [publicKey, setPublicKey] = useState<string>();
   const [canResume, setCanResume] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const startInProgress = useRef(false);
 
   useEffect(() => {
     const wallet = readDemoWallet();
@@ -30,6 +32,9 @@ export function DemoStarter() {
   }, []);
 
   async function startDemo() {
+    if (startInProgress.current) return;
+    startInProgress.current = true;
+    setIsStarting(true);
     try {
       const existingWallet = readDemoWallet();
       if (existingWallet) {
@@ -75,12 +80,15 @@ export function DemoStarter() {
       if (result.invoiceId) window.location.assign(`/invoices/${encodeURIComponent(result.invoiceId)}`);
     } catch (error: unknown) {
       setMessage(error instanceof Error ? error.message : "A demonstração não pôde ser concluída");
+    } finally {
+      startInProgress.current = false;
+      setIsStarting(false);
     }
   }
 
   return (
     <section>
-      <button type="button" onClick={startDemo}>{canResume ? "Continuar demonstração" : "Iniciar demonstração automática"}</button>
+      <button aria-busy={isStarting} disabled={isStarting} type="button" onClick={startDemo}>{canResume ? "Continuar demonstração" : "Iniciar demonstração automática"}</button>
       <p>{message}</p>
       {publicKey ? <code>{publicKey}</code> : null}
     </section>

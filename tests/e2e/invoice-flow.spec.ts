@@ -19,19 +19,23 @@ test("renders the Testnet portal without horizontal overflow on desktop and mobi
 test("resumes an existing browser demo wallet without requesting another BRLT allowance", async ({ page }) => {
   const wallet = Keypair.random();
   const invoiceId = "00000000-0000-4000-8000-000000000123";
+  let authenticationChallenges = 0;
 
   await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), {
     key: DEMO_STORAGE_KEY,
     secret: wallet.secret(),
   });
-  await page.route(/\/api\/auth\/challenge$/, async (route) => route.fulfill({
-    body: JSON.stringify({
-      expiresAt: "2030-01-01T00:05:00.000Z",
-      id: "resume-challenge",
-      message: "resume this demo wallet",
-    }),
-    contentType: "application/json",
-  }));
+  await page.route(/\/api\/auth\/challenge$/, async (route) => {
+    authenticationChallenges += 1;
+    await route.fulfill({
+      body: JSON.stringify({
+        expiresAt: "2030-01-01T00:05:00.000Z",
+        id: `resume-challenge-${authenticationChallenges}`,
+        message: "resume this demo wallet",
+      }),
+      contentType: "application/json",
+    });
+  });
   await page.route(/\/api\/auth\/verify$/, async (route) => route.fulfill({
     body: JSON.stringify({ authenticated: true, walletPublicKey: wallet.publicKey() }),
     contentType: "application/json",
@@ -52,11 +56,22 @@ test("resumes an existing browser demo wallet without requesting another BRLT al
   await continueButton.click();
 
   await expect(page).toHaveURL(new RegExp(`/invoices/${invoiceId}$`));
+  await expect(page.getByRole("button", { name: "Continuar demonstração" })).toBeVisible();
+  await page.waitForTimeout(100);
+  expect(authenticationChallenges).toBe(1);
 });
 
 test("reuses a stored wallet that was saved before initial demo provisioning completed", async ({ page }) => {
   const wallet = Keypair.random();
+  const issuer = Keypair.random().publicKey();
+  const invoiceId = "00000000-0000-4000-8000-000000000456";
+  const trustlineXdr = new TransactionBuilder(new Account(wallet.publicKey(), "0"), { fee: "100", networkPassphrase: Networks.TESTNET })
+    .addOperation(Operation.changeTrust({ asset: new Asset("BRLT", issuer) }))
+    .setTimeout(180)
+    .build()
+    .toXDR();
   let provisionRequests = 0;
+  let resumeRequests = 0;
 
   await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), {
     key: DEMO_STORAGE_KEY,
@@ -75,27 +90,52 @@ test("reuses a stored wallet that was saved before initial demo provisioning com
     contentType: "application/json",
   }));
   await page.route(/\/api\/demo\/resume$/, async (route) => route.fulfill({
-    body: JSON.stringify({
+    body: JSON.stringify((resumeRequests += 1, {
       code: "DEMO_NOT_PROVISIONED",
       error: "Esta carteira demo ainda não recebeu BRLT fictício.",
-    }),
+    })),
     contentType: "application/json",
     status: 409,
   }));
   await page.route(/\/api\/demo\/provision$/, async (route) => {
     provisionRequests += 1;
+    expect(route.request().postDataJSON()).toEqual({ publicKey: wallet.publicKey() });
+    await new Promise((resolve) => setTimeout(resolve, 50));
     await route.fulfill({
-      body: JSON.stringify({ error: "Provisionamento inicial retomado pelo teste." }),
+      body: JSON.stringify({ issuerPublicKey: issuer, sessionId: "recovered-session", trustlineXdr }),
       contentType: "application/json",
-      status: 400,
     });
   });
+  await page.route("https://horizon-testnet.stellar.org/transactions", async (route) => route.fulfill({
+    body: JSON.stringify({ hash: "a".repeat(64) }),
+    contentType: "application/json",
+  }));
+  await page.route(/\/api\/demo\/distribute$/, async (route) => {
+    const body = route.request().postDataJSON() as { claimMessage: string; sessionId: string; signedClaim: string };
+    expect(body.sessionId).toBe("recovered-session");
+    expect(body.claimMessage).toContain(wallet.publicKey());
+    expect(Keypair.fromPublicKey(wallet.publicKey()).verify(Buffer.from(body.claimMessage), Buffer.from(body.signedClaim, "base64"))).toBe(true);
+    await route.fulfill({
+      body: JSON.stringify({ amount: "25", invoiceId, transactionHash: "b".repeat(64) }),
+      contentType: "application/json",
+    });
+  });
+  await page.route(new RegExp(`/api/invoices/${invoiceId}$`), async (route) => route.fulfill({
+    body: JSON.stringify({ error: "Wallet authentication is required" }),
+    contentType: "application/json",
+    status: 401,
+  }));
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Continuar demonstração" }).click();
+  const continueButton = page.getByRole("button", { name: "Continuar demonstração" });
+  await continueButton.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+  });
 
-  await expect.poll(() => provisionRequests).toBe(1);
-  await expect(page.getByText("Provisionamento inicial retomado pelo teste.")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/invoices/${invoiceId}$`));
+  expect(resumeRequests).toBe(1);
+  expect(provisionRequests).toBe(1);
 });
 
 test("reviews and signs the exact demo invoice in the browser before verification", async ({ page }) => {

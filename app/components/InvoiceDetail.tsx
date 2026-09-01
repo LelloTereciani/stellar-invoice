@@ -61,17 +61,10 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
     void loadInvoice();
   }, [loadInvoice]);
 
-  useEffect(() => {
-    if (loadError && wallet.walletKind === "demo") {
-      void wallet.connectDemo().then((address) => { if (address) void loadInvoice(); });
-    }
-    // connectDemo is stable; limiting dependencies prevents repeated challenge issuance.
-    // connectDemo é estável; limitar dependências evita emitir desafios repetidos.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadError, wallet.walletKind]);
-
   async function connectAndLoad() {
-    const address = await wallet.connect();
+    const address = wallet.walletKind === "demo"
+      ? await wallet.connectDemo()
+      : await wallet.connect();
     if (address) await loadInvoice();
   }
 
@@ -96,7 +89,9 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
           <section className="panel auth-gate">
             <p className="kicker">ACESSO PROTEGIDO</p><h2>Autentique a carteira devedora</h2>
             <p>{loadError}</p>
-            <button className="button button--primary" type="button" onClick={connectAndLoad}>Conectar Freighter</button>
+            <button className="button button--primary" type="button" onClick={connectAndLoad}>
+              {wallet.walletKind === "demo" ? "Continuar demonstração" : "Conectar Freighter"}
+            </button>
           </section>
         ) : null}
         {invoice ? (

@@ -141,13 +141,31 @@ select public.test_assert(
   (public.reserve_demo_distribution(repeat('1', 64), '20000000-0000-4000-8000-000000000001', now())).status = 'preparing',
   'first demo request owns the preparation reservation'
 );
+select public.create_demo_session(
+  '10000000-0000-4000-8000-000000000002',
+  'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
+  repeat('e', 64), repeat('7', 64), now() + interval '10 minutes'
+);
+select public.test_assert(
+  (public.reserve_demo_distribution(repeat('e', 64), '20000000-0000-4000-8000-000000000004', now())).status = 'preparing',
+  'a refreshed session recovers a preparing distribution'
+);
 select public.test_assert(
   (public.store_demo_distribution_xdr('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', '20000000-0000-4000-8000-000000000001', repeat('A', 120), repeat('f', 64))).status = 'prepared',
   'signed XDR and hash are persisted before broadcast'
 );
 select public.test_assert(
-  (public.reserve_demo_distribution(repeat('1', 64), '20000000-0000-4000-8000-000000000002', now())).transaction_hash = repeat('f', 64),
+  (public.reserve_demo_distribution(repeat('e', 64), '20000000-0000-4000-8000-000000000002', now())).transaction_hash = repeat('f', 64),
   'retry recovers the same prepared transaction'
+);
+select public.create_demo_session(
+  '10000000-0000-4000-8000-000000000003',
+  'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
+  repeat('a', 64), repeat('7', 64), now() + interval '10 minutes'
+);
+select public.test_assert(
+  (public.reserve_demo_distribution(repeat('a', 64), '20000000-0000-4000-8000-000000000003', now())).transaction_hash = repeat('f', 64),
+  'a refreshed session recovers the same unconfirmed distribution'
 );
 select public.test_assert((select count(*) from public.demo_distributions) = 1, 'retry does not create a second allowance');
 select public.test_assert(
@@ -166,6 +184,16 @@ select public.test_assert(
   (public.complete_demo_distribution('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', repeat('6', 64))).status = 'confirmed',
   'distribution completion is idempotent'
 );
+do $$
+declare confirmed_session_rejected boolean := false;
+begin
+  begin
+    perform public.create_demo_session(gen_random_uuid(), 'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', repeat('b', 64), repeat('7', 64), now() + interval '10 minutes');
+  exception when raise_exception then confirmed_session_rejected := true;
+  end;
+  perform public.test_assert(confirmed_session_rejected, 'a confirmed allowance cannot receive a refreshed session');
+end;
+$$;
 select public.test_assert(
   (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 5.0000000, 'demo-invoice-one', now() + interval '1 day')).id =
   (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 5.0000000, 'ignored-retry-memo', now() + interval '1 day')).id,
@@ -176,15 +204,45 @@ reset role;
 
 do $$
 declare rate_limit_enforced boolean := false;
+declare session_number integer;
 begin
-  perform public.create_demo_session('30000000-0000-4000-8000-000000000001', 'GBKMZ2CK7QANNLRLAX7BI32X7MTI7W542OLPNCZF46G2SEPWCDTEM2Q7', repeat('2', 64), repeat('8', 64), now() + interval '10 minutes');
-  perform public.create_demo_session('30000000-0000-4000-8000-000000000002', 'GACBLHJA3EWQE7VWPD3KV4TBO35QTP7OZJY5WX3CXLOZCOOMFNYKGT6I', repeat('3', 64), repeat('8', 64), now() + interval '10 minutes');
-  perform public.create_demo_session('30000000-0000-4000-8000-000000000003', 'GCTZDCUPFOELGFJXXAHCCOY3VANI5N3G2JWUMOAPKAPIZVLUMIWWXXFW', repeat('4', 64), repeat('8', 64), now() + interval '10 minutes');
+  for session_number in 1..10 loop
+    perform public.create_demo_session(
+      gen_random_uuid(),
+      'G' || repeat('A', 54) || chr(64 + session_number),
+      md5('rate-token-' || session_number) || md5('rate-token-tail-' || session_number),
+      repeat('8', 64),
+      now() + interval '10 minutes'
+    );
+  end loop;
   begin
-    perform public.create_demo_session('30000000-0000-4000-8000-000000000004', 'GDDMM4RDODH6BW3AD6RSPMKHWRYQRXEFRPEOJIV7WZ6I2RXXCDUUVRKM', repeat('5', 64), repeat('8', 64), now() + interval '10 minutes');
+    perform public.create_demo_session(gen_random_uuid(), 'G' || repeat('A', 54) || 'K', repeat('c', 64), repeat('8', 64), now() + interval '10 minutes');
   exception when raise_exception then rate_limit_enforced := true;
   end;
-  perform public.test_assert(rate_limit_enforced, 'fourth daily session from one origin is rejected');
+  perform public.test_assert(rate_limit_enforced, 'eleventh daily session from one origin is rejected');
+end;
+$$;
+
+do $$
+declare current_count integer;
+declare global_limit_enforced boolean := false;
+declare session_number integer;
+begin
+  select count(*) into current_count from public.demo_sessions where created_at >= date_trunc('day', now());
+  for session_number in (current_count + 1)..200 loop
+    perform public.create_demo_session(
+      gen_random_uuid(),
+      'G' || upper(translate(lpad(to_hex(1000 + session_number), 55, 'a'), '0189', 'GHIJ')),
+      md5('global-token-' || session_number) || md5('global-token-tail-' || session_number),
+      md5('global-origin-' || session_number) || md5('global-origin-tail-' || session_number),
+      now() + interval '10 minutes'
+    );
+  end loop;
+  begin
+    perform public.create_demo_session(gen_random_uuid(), 'G' || repeat('Z', 55), repeat('d', 64), repeat('e', 64), now() + interval '10 minutes');
+  exception when raise_exception then global_limit_enforced := true;
+  end;
+  perform public.test_assert(global_limit_enforced, '201st daily demo session is rejected globally');
 end;
 $$;
 

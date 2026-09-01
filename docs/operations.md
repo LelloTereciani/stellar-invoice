@@ -26,18 +26,19 @@ Pin the previously known-good Git commit in EasyPanel and redeploy it. Do not ro
 
 ## New and existing database volumes
 
-All sixteen product migrations are mounted into the official Supabase initialization directory and run in order on a new volume. Existing volumes do not replay init scripts: apply only the newly reviewed migration files during a maintenance window, verify the GitHub `database` job, back up first, and never delete the volume as an upgrade mechanism.
+All seventeen product migrations are mounted into the official Supabase initialization directory and run in order on a new volume. Existing volumes do not replay init scripts: apply only the newly reviewed migration files during a maintenance window, verify the GitHub `database` job, back up first, and never delete the volume as an upgrade mechanism.
 
-For an existing EasyPanel database created before migration `0016`, first confirm a recent validated backup, deploy the reviewed Compose so the migration is mounted, then open the private `db` service terminal and run:
+For an existing EasyPanel database created before migrations `0016` and `0017`, first confirm a recent validated backup, deploy the reviewed Compose so both migrations are mounted, then open the private `db` service terminal and run them in order:
 
 ```sh
 psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --file /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0016.sql
+psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --file /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0017.sql
 ```
 
-The command is idempotent because the migration replaces the existing function without deleting data. Do not delete or recreate `postgres-data` to apply it. Confirm the installed definition with:
+The commands are idempotent because both migrations replace the existing function without deleting data. Do not delete or recreate `postgres-data` to apply them. Confirm the installed definition with:
 
 ```sh
-psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --tuples-only --command "select pg_get_functiondef('public.create_demo_session(uuid,text,text,text,timestamptz)'::regprocedure) like '%>= 10%';"
+psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --tuples-only --command "select pg_get_functiondef('public.create_demo_session(uuid,text,text,text,timestamptz)'::regprocedure) like '%>= 10%' as per_origin_limit_10, pg_get_functiondef('public.create_demo_session(uuid,text,text,text,timestamptz)'::regprocedure) like '%>= 200%' as global_limit_200, pg_get_functiondef('public.create_demo_session(uuid,text,text,text,timestamptz)'::regprocedure) like '%distribution_status = ''confirmed''%' as interrupted_session_recovery;"
 ```
 
-The result must be `t` before retesting the public demo.
+All three results must be `t` before retesting the public demo.
