@@ -57,16 +57,17 @@ describe("disposable browser demo wallet", () => {
     })
       .addMemo(Memo.text(invoice.memo))
       .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuer), destination: issuer }))
-      .setTimeout(300)
+      .setTimeout(180)
       .build()
       .toXDR();
+    const expectedHash = TransactionBuilder.fromXDR(xdr, Networks.TESTNET).hash().toString("hex");
     const submit = vi.fn().mockImplementation(async (signedXdr: string) => {
       const signed = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
       expect(signed.signatures).toHaveLength(1);
-      return { hash: "a".repeat(64) };
+      return { hash: expectedHash };
     });
 
-    await expect(payInvoiceWithDemoWallet({ invoice, wallet, xdr }, submit)).resolves.toBe("a".repeat(64));
+    await expect(payInvoiceWithDemoWallet({ invoice, wallet, xdr }, submit)).resolves.toBe(expectedHash);
     expect(submit).toHaveBeenCalledOnce();
   });
 });

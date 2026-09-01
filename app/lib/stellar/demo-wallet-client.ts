@@ -79,6 +79,7 @@ export async function payInvoiceWithDemoWallet(
   const walletPublicKey = input.wallet.publicKey();
   input.onStage?.("reviewing");
   reviewInvoicePaymentXdr(input.xdr, input.invoice, walletPublicKey);
+  const expectedHash = TransactionBuilder.fromXDR(input.xdr, Networks.TESTNET).hash().toString("hex");
   input.onStage?.("awaiting-signature");
   const transaction = TransactionBuilder.fromXDR(input.xdr, Networks.TESTNET);
   transaction.sign(input.wallet);
@@ -89,5 +90,6 @@ export async function payInvoiceWithDemoWallet(
   input.onStage?.("submitting");
   const result = await submit(signedXdr);
   if (!/^[a-f0-9]{64}$/i.test(result.hash)) throw new Error("Horizon returned an invalid transaction hash");
+  if (result.hash !== expectedHash) throw new Error("Horizon returned an unexpected transaction hash");
   return result.hash;
 }

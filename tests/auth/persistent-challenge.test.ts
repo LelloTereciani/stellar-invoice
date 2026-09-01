@@ -30,19 +30,19 @@ describe("persistent issuer challenge", () => {
   it("authorizes the exact invoice once and rejects replay", async () => {
     const issuer = Keypair.random();
     const store = new MemoryStore();
-    const challenge = await issuePersistentIssuerChallenge(invoice, issuer.publicKey(), store, new Date("2029-01-01T00:00:00.000Z"));
+    const challenge = await issuePersistentIssuerChallenge(invoice, issuer.publicKey(), "https://invoice.example.com", store, new Date("2029-01-01T00:00:00.000Z"));
     const signature = issuer.sign(Buffer.from(challenge.message)).toString("base64");
 
-    await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice, signature }, issuer.publicKey(), store, new Date("2029-01-01T00:01:00.000Z"))).resolves.toBeUndefined();
-    await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice, signature }, issuer.publicKey(), store, new Date("2029-01-01T00:02:00.000Z"))).rejects.toThrow("invalid or expired");
+    await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice, signature }, issuer.publicKey(), "https://invoice.example.com", store, new Date("2029-01-01T00:01:00.000Z"))).resolves.toBeUndefined();
+    await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice, signature }, issuer.publicKey(), "https://invoice.example.com", store, new Date("2029-01-01T00:02:00.000Z"))).rejects.toThrow("invalid or expired");
   });
 
   it("does not authorize a modified invoice", async () => {
     const issuer = Keypair.random();
     const store = new MemoryStore();
-    const challenge = await issuePersistentIssuerChallenge(invoice, issuer.publicKey(), store, new Date("2029-01-01T00:00:00.000Z"));
+    const challenge = await issuePersistentIssuerChallenge(invoice, issuer.publicKey(), "https://invoice.example.com", store, new Date("2029-01-01T00:00:00.000Z"));
     const signature = issuer.sign(Buffer.from(challenge.message)).toString("base64");
 
-    await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice: { ...invoice, amount: "26.0000000" }, signature }, issuer.publicKey(), store, new Date("2029-01-01T00:01:00.000Z"))).rejects.toThrow("does not match");
+    await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice: { ...invoice, amount: "26.0000000" }, signature }, issuer.publicKey(), "https://invoice.example.com", store, new Date("2029-01-01T00:01:00.000Z"))).rejects.toThrow("does not match");
   });
 });

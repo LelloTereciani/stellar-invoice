@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useFreighter, type WalletFlowStatus } from "../hooks/useFreighter.js";
 import type { CustomerInvoice } from "../lib/invoices/client-types.js";
 import { AppHeader } from "./AppHeader.js";
+import { ExplorerLink } from "./ExplorerLink.js";
 import { StatusBadge } from "./StatusBadge.js";
 
 const FLOW_LABELS: Record<WalletFlowStatus, string> = {
@@ -120,7 +121,7 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             <div className="security-note"><strong>TESTNET · SEM VALOR REAL</strong><p>A assinatura acontece na sua carteira. Nunca informe uma seed. Criar uma trustline apenas autoriza receber BRLT fictício; não é pagamento.</p></div>
             {wallet.error ? <p className="error-message" role="alert">{wallet.error}</p> : null}
             {FLOW_LABELS[wallet.status] ? <p className="flow-status" aria-live="polite">{FLOW_LABELS[wallet.status]}</p> : null}
-            {hash ? <div className="confirmation"><strong>Hash da transação</strong><code>{hash}</code><a href={`https://stellar.expert/explorer/testnet/tx/${hash}`} rel="noreferrer" target="_blank">Abrir no Stellar Expert ↗</a></div> : null}
+            {hash ? <div className="confirmation"><strong>Hash da transação</strong><code>{hash}</code><ExplorerLink transactionHash={hash} /></div> : null}
             {invoice.status === "pending" ? (
               <div className="action-row">
                 {wallet.walletKind === "freighter" ? <button className="button button--secondary" type="button" onClick={wallet.createTrustline}>Estabelecer trustline</button> : null}

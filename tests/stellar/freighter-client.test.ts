@@ -1,4 +1,4 @@
-import { Keypair, Networks } from "@stellar/stellar-sdk";
+import { Keypair, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -59,10 +59,11 @@ describe("Freighter Testnet client", () => {
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ account_id: debtorPublicKey, sequence: "123" }))));
     const xdr = await buildInvoicePaymentXdr(invoice, debtorPublicKey);
-    const submit = vi.fn().mockResolvedValue({ hash: "a".repeat(64) });
+    const expectedHash = TransactionBuilder.fromXDR(xdr, Networks.TESTNET).hash().toString("hex");
+    const submit = vi.fn().mockResolvedValue({ hash: expectedHash });
 
     await expect(payInvoiceWithFreighter({ invoice, walletPublicKey: debtorPublicKey, xdr }, adapter(debtorPublicKey), submit))
-      .resolves.toBe("a".repeat(64));
+      .resolves.toBe(expectedHash);
     expect(submit).toHaveBeenCalledOnce();
   });
 
@@ -71,9 +72,9 @@ describe("Freighter Testnet client", () => {
     const issuerPublicKey = Keypair.random().publicKey();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ account_id: walletPublicKey, sequence: "123" }))));
     const xdr = await (await import("../../app/lib/stellar/transactions.js")).buildTrustlineXdr(walletPublicKey, issuerPublicKey);
-    const submit = vi.fn().mockResolvedValue({ hash: "b".repeat(64) });
+    const submit = vi.fn().mockResolvedValue({ hash: TransactionBuilder.fromXDR(xdr, Networks.TESTNET).hash().toString("hex") });
 
     await expect(createTrustlineWithFreighter({ issuerPublicKey, walletPublicKey, xdr }, adapter(walletPublicKey), submit))
-      .resolves.toBe("b".repeat(64));
+      .resolves.toMatch(/^[a-f0-9]{64}$/);
   });
 });

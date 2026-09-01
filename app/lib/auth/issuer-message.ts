@@ -19,11 +19,12 @@ export function buildIssuerChallengeMessage(input: {
   expiresAt: string;
   issuerPublicKey: string;
   nonce: string;
+  origin: string;
   requestHash: string;
 }): string {
   return [
-    "StellarInvoice authorization v1",
-    "domain:stellar-invoice",
+    "StellarInvoice authorization v2",
+    `origin:${new URL(input.origin).origin}`,
     "network:testnet",
     "action:create-invoice",
     `issuer:${input.issuerPublicKey}`,

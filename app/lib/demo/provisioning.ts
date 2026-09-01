@@ -1,4 +1,4 @@
-import { Asset, Horizon, Keypair, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Asset, Horizon, Keypair, Networks, Operation, Transaction, TransactionBuilder } from "@stellar/stellar-sdk";
 
 const FRIENDBOT_URL = "https://friendbot.stellar.org";
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
@@ -56,6 +56,7 @@ export async function prepareDemoBrltDistribution(customerPublicKey: string, iss
 
 export async function submitPreparedDemoDistribution(signedXdr: string) {
   const transaction = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+  if (!(transaction instanceof Transaction)) throw new Error("Prepared demo distribution is not a standard transaction");
   return new Horizon.Server(HORIZON_URL).submitTransaction(transaction);
 }
 
@@ -67,6 +68,14 @@ export async function demoDistributionExists(transactionHash: string): Promise<b
     if ((error as { response?: { status?: number } }).response?.status === 404) return false;
     throw error;
   }
+}
+
+export function demoDistributionExpired(signedXdr: string, now = new Date()): boolean {
+  const transaction = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+  if (!(transaction instanceof Transaction)) throw new Error("Prepared demo distribution is not a standard transaction");
+  const maxTime = Number(transaction.timeBounds?.maxTime);
+  if (!Number.isSafeInteger(maxTime) || maxTime <= 0) throw new Error("Prepared demo distribution has invalid time bounds");
+  return maxTime <= Math.floor(now.getTime() / 1000);
 }
 
 export const DEMO_ASSET_AMOUNT = DEMO_BRL_AMOUNT;

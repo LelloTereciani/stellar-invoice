@@ -21,11 +21,12 @@ describe("issuer authorization message", () => {
       expiresAt: "2029-12-31T23:59:00.000Z",
       issuerPublicKey: issuer.publicKey(),
       nonce: "aa".repeat(32),
+      origin: "https://invoice.example.com",
       requestHash,
     });
     const signature = issuer.sign(Buffer.from(message)).toString("base64");
 
-    expect(message).toContain("domain:stellar-invoice");
+    expect(message).toContain("origin:https://invoice.example.com");
     expect(message).toContain("network:testnet");
     expect(message).toContain("action:create-invoice");
     expect(verifyIssuerMessageSignature(message, signature, issuer.publicKey())).toBe(true);

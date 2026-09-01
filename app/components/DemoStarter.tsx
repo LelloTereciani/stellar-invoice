@@ -6,10 +6,12 @@ import { useState } from "react";
 
 import { buildDemoClaimMessage } from "../lib/demo/claim-message.js";
 import { authenticateDemoWallet, getOrCreateDemoWallet } from "../lib/stellar/demo-wallet-client.js";
+import { reviewTrustlineXdr } from "../lib/stellar/transactions.js";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 
 type ProvisionResponse = {
+  issuerPublicKey: string;
   sessionId: string;
   trustlineXdr: string;
 };
@@ -32,8 +34,10 @@ export function DemoStarter() {
       if (!response.ok) throw new Error(provision.error ?? "Não foi possível provisionar a demonstração");
 
       setMessage("Assinando a trustline BRLT na carteira local...");
+      reviewTrustlineXdr(provision.trustlineXdr, wallet.publicKey(), provision.issuerPublicKey);
       const transaction = TransactionBuilder.fromXDR(provision.trustlineXdr, Networks.TESTNET);
       transaction.sign(wallet);
+      reviewTrustlineXdr(transaction.toXDR(), wallet.publicKey(), provision.issuerPublicKey);
       await new Horizon.Server(HORIZON_URL).submitTransaction(transaction);
 
       const claimMessage = buildDemoClaimMessage(wallet.publicKey(), provision.sessionId);

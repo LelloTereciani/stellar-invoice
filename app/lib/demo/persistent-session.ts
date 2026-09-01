@@ -69,3 +69,23 @@ export async function ensureDemoInvoice(customerPublicKey: string, issuerPublicK
   if (error || !data) throw new Error("Demo invoice could not be created");
   return data as { id: string; memo: string; status: "pending" };
 }
+
+export async function acquireDemoDistributionLock(ownerKey: string) {
+  const { error } = await database().rpc("acquire_demo_distribution_lock", { lock_owner: ownerKey, requested_at: new Date().toISOString() });
+  if (error) throw new Error("Another demo distribution is in progress; retry shortly");
+}
+
+export async function releaseDemoDistributionLock(ownerKey: string) {
+  const { error } = await database().rpc("release_demo_distribution_lock", { lock_owner: ownerKey });
+  if (error) throw new Error("Demo distribution lock could not be released");
+}
+
+export async function resetExpiredDemoDistribution(customerPublicKey: string, transactionHash: string, attemptKey: string) {
+  const { data, error } = await database().rpc("reset_expired_demo_distribution", {
+    distribution_customer_public_key: customerPublicKey,
+    expected_transaction_hash: transactionHash,
+    replacement_attempt_key: attemptKey,
+  });
+  if (error || !data) throw new Error("Expired demo distribution could not be recovered");
+  return mapDistribution(data as DistributionRow);
+}

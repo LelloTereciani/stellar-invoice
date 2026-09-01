@@ -27,6 +27,7 @@ export function useFreighter() {
   const [status, setStatus] = useState<WalletFlowStatus>("idle");
   const [error, setError] = useState<string>();
   const [transactionHash, setTransactionHash] = useState<string>();
+  const [paymentHash, setPaymentHash] = useState<string>();
   const [walletKind, setWalletKind] = useState<"demo" | "freighter">();
 
   useEffect(() => {
@@ -99,17 +100,27 @@ export function useFreighter() {
     if (!walletPublicKey) throw new Error("Connect the wallet first");
     try {
       setError(undefined);
-      setStatus("preparing");
-      const response = await fetch(`/api/invoices/${encodeURIComponent(invoice.id)}/payment`);
-      const payload = (await response.json()) as { error?: string; xdr?: string };
-      if (!response.ok || !payload.xdr) throw new Error(payload.error || "Payment could not be prepared");
-      const localWallet = walletKind === "demo" ? readDemoWallet() : undefined;
-      if (walletKind === "demo" && (!localWallet || localWallet.publicKey() !== walletPublicKey)) {
-        throw new Error("The local demo wallet changed");
+      let hash = paymentHash;
+      if (!hash) {
+        setStatus("preparing");
+        const response = await fetch(`/api/invoices/${encodeURIComponent(invoice.id)}/payment`);
+        const payload = (await response.json()) as { error?: string; preparedTransactionHash?: string; transactionHash?: string; xdr?: string };
+        if (!response.ok) throw new Error(payload.error || "Payment could not be prepared");
+        if (payload.transactionHash) {
+          hash = payload.transactionHash;
+        } else {
+          if (!payload.xdr || !payload.preparedTransactionHash) throw new Error("Payment preparation was incomplete");
+          const localWallet = walletKind === "demo" ? readDemoWallet() : undefined;
+          if (walletKind === "demo" && (!localWallet || localWallet.publicKey() !== walletPublicKey)) {
+            throw new Error("The local demo wallet changed");
+          }
+          hash = localWallet
+            ? await payInvoiceWithDemoWallet({ invoice, onStage: setStatus, wallet: localWallet, xdr: payload.xdr })
+            : await payInvoiceWithFreighter({ invoice, onStage: setStatus, walletPublicKey, xdr: payload.xdr });
+          if (hash !== payload.preparedTransactionHash) throw new Error("Submitted payment hash differs from the prepared transaction");
+        }
+        setPaymentHash(hash);
       }
-      const hash = localWallet
-        ? await payInvoiceWithDemoWallet({ invoice, onStage: setStatus, wallet: localWallet, xdr: payload.xdr })
-        : await payInvoiceWithFreighter({ invoice, onStage: setStatus, walletPublicKey, xdr: payload.xdr });
       setTransactionHash(hash);
       setStatus("verifying");
       const verificationResponse = await fetch(`/api/invoices/${encodeURIComponent(invoice.id)}/verify`, {
@@ -128,7 +139,7 @@ export function useFreighter() {
       setStatus("error");
       return undefined;
     }
-  }, [walletKind, walletPublicKey]);
+  }, [paymentHash, walletKind, walletPublicKey]);
 
   return { connect, connectDemo, createTrustline, error, payInvoice, status, transactionHash, walletKind, walletPublicKey };
 }

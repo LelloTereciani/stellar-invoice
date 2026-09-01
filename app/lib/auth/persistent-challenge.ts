@@ -27,6 +27,7 @@ export interface IssuerChallengeStore {
 export async function issuePersistentIssuerChallenge(
   invoice: InvoiceAuthorizationRequest,
   issuerPublicKey: string,
+  origin: string,
   store: IssuerChallengeStore,
   now = new Date(),
 ): Promise<{ expiresAt: string; id: string; message: string }> {
@@ -37,6 +38,7 @@ export async function issuePersistentIssuerChallenge(
     expiresAt,
     issuerPublicKey,
     nonce: randomBytes(32).toString("hex"),
+    origin,
     requestHash,
   });
   await store.insert({ expiresAt, id, issuerPublicKey, messageHash: sha256(message), requestHash });
@@ -46,6 +48,7 @@ export async function issuePersistentIssuerChallenge(
 export async function verifyAndConsumeIssuerChallenge(
   input: { expiresAt: string; id: string; invoice: InvoiceAuthorizationRequest; message: string; signature: string },
   issuerPublicKey: string,
+  origin: string,
   store: IssuerChallengeStore,
   now = new Date(),
 ): Promise<void> {
@@ -53,8 +56,8 @@ export async function verifyAndConsumeIssuerChallenge(
   const lines = input.message.split("\n");
   const structurallyValid =
     lines.length === 8 &&
-    lines[0] === "StellarInvoice authorization v1" &&
-    lines[1] === "domain:stellar-invoice" &&
+    lines[0] === "StellarInvoice authorization v2" &&
+    lines[1] === `origin:${new URL(origin).origin}` &&
     lines[2] === "network:testnet" &&
     lines[3] === "action:create-invoice" &&
     lines[4] === `issuer:${issuerPublicKey}` &&

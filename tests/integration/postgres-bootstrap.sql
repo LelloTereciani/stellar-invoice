@@ -3,6 +3,8 @@
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin bypassrls;
+create role authenticator noinherit login password 'postgrest-integration-only';
+grant anon, authenticated, service_role to authenticator;
 
 create schema auth;
 create function auth.jwt()

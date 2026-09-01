@@ -6,11 +6,14 @@ MVP de faturamento B2B na Stellar Testnet com o ativo fictício `BRLT`.
 
 O fluxo Testnet está implementado de ponta a ponta: autenticação por carteira, painel responsivo, fatura destinada ao devedor, revisão do XDR, assinatura no navegador, submissão e verificação no ledger. O modo demonstração cria uma chave descartável somente no navegador, usa Friendbot, configura a trustline BRLT, distribui ativos fictícios e abre uma fatura pronta para pagamento. Supabase, aplicação e Caddy são auto-hospedados na mesma pilha Docker.
 
+A jornada também foi executada contra a Stellar Testnet real; hashes públicos e o comando reproduzível estão em [docs/testnet-evidence.md](docs/testnet-evidence.md).
+
 ## Desenvolvimento local
 
 1. Use Node.js 22 ou superior.
 2. Copie `.env.example` para `.env.local` e informe somente chaves públicas de Testnet.
 3. Execute `pnpm install`, `pnpm test`, `pnpm typecheck`, `pnpm build` e `pnpm test:e2e`.
+4. Opcionalmente, após `pnpm demo:bootstrap`, execute `pnpm evidence:testnet` para uma jornada descartável na rede pública de testes.
 
 ## Deploy no EasyPanel
 

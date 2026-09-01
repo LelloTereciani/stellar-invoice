@@ -51,6 +51,10 @@ jobs:
             if [ "$attempt" = 30 ]; then docker logs stellar-invoice-test; exit 1; fi
             sleep 1
           done
+          headers=$(curl --fail --silent --dump-header - --output /dev/null http://127.0.0.1:3000/ | tr -d '\r')
+          csp=$(printf '%s\n' "$headers" | sed -n '/^[Cc]ontent-[Ss]ecurity-[Pp]olicy:/p')
+          test -n "$csp"
+          ! printf '%s\n' "$csp" | grep -Eq "script-src[^;]*'unsafe-inline'"
           test "$(docker inspect --format '{{.Config.User}}' stellar-invoice-test)" = nextjs
           docker rm --force stellar-invoice-test
 
@@ -86,3 +90,28 @@ jobs:
           done
       - name: Verify privileges, RLS, and lifecycle
         run: psql --file tests/integration/database.sql
+      - name: Verify exact decimal through real PostgREST JSON
+        run: |
+          psql <<'SQL'
+          insert into public.invoices(debtor_public_key, issuer_public_key, asset_code, asset_issuer, amount, memo, due_at)
+          values ('GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 1234567890123.1234567, 'postgrest-exact', now() + interval '1 day');
+          SQL
+          jwt_secret=$(sed -n 's/^JWT_SECRET=//p' infra/supabase/.env.example | head -n 1)
+          docker run --detach --name stellar-invoice-postgrest --network host \
+            --env PGRST_DB_URI='postgresql://authenticator:postgrest-integration-only@127.0.0.1:5432/stellar_invoice_test' \
+            --env PGRST_DB_SCHEMAS=public --env PGRST_DB_ANON_ROLE=anon --env PGRST_JWT_SECRET="$jwt_secret" \
+            postgrest/postgrest:v14.12
+          trap 'docker rm --force stellar-invoice-postgrest >/dev/null 2>&1 || true' EXIT
+          for attempt in {1..30}; do if curl --fail --silent http://127.0.0.1:3000/ >/dev/null; then break; fi; sleep 1; done
+          token=$(POSTGREST_TEST_JWT_SECRET="$jwt_secret" node tests/integration/postgrest-token.mjs)
+          response=$(curl --fail --silent --header "Authorization: Bearer $token" 'http://127.0.0.1:3000/invoices?select=amount_text&memo=eq.postgrest-exact')
+          test "$(jq -r '.[0].amount_text' <<<"$response")" = '1234567890123.1234567'
+      - name: Prove logical backup and isolated restore
+        env:
+          BACKUP_DIR: /tmp/stellar-invoice-backups
+          BACKUP_LOCAL_POSTGRES: enabled
+        run: |
+          infra/backup.sh
+          backup=$(find "$BACKUP_DIR" -type f -name 'stellar-invoice-*.sql.gz' -print -quit)
+          test -n "$backup"
+          infra/restore-check.sh "$backup"

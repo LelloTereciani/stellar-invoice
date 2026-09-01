@@ -12,7 +12,7 @@ O template oficial Docker do Supabase está versionado neste diretório a partir
 4. Set the public URLs to the final HTTPS domain and restrict CORS/site redirects to that domain.
 5. Attach persistent storage for `infra/supabase/volumes` and keep a backup outside that volume.
 
-All twelve project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; back up first and apply only reviewed new SQL migrations during a controlled maintenance window.
+All fifteen project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; back up first and apply only reviewed new SQL migrations during a controlled maintenance window.
 
 As migrations do projeto são montadas pela sobreposição do StellarInvoice e executam quando o Postgres inicializa um volume de dados **novo**. Volumes existentes não são alterados automaticamente na inicialização; aplique migrações SQL revisadas explicitamente em uma janela de manutenção controlada.
 

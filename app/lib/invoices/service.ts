@@ -3,19 +3,26 @@ import { createClient } from "@supabase/supabase-js";
 import { requireServerEnv } from "../config.js";
 import { createInvoiceDraft, type InvoiceInput } from "./validation.js";
 
-type InvoiceRow = { id: string; amount: string; asset_issuer: string; confirmed_transaction_hash?: string | null; debtor_public_key: string; due_at: string; issuer_public_key: string; memo: string; status: "pending" | "confirmed" | "expired" };
+type InvoiceRow = { id: string; amount_text: string; asset_issuer: string; confirmed_transaction_hash?: string | null; created_at: string; debtor_public_key: string; due_at: string; issuer_public_key: string; memo: string; prepared_payment_expires_at?: string | null; prepared_payment_hash?: string | null; prepared_payment_xdr?: string | null; status: "pending" | "confirmed" | "expired" };
 type RejectedAttemptRow = { observed_at: string; reason: string; transaction_hash: string };
 
 export function mapInvoiceRow(row: InvoiceRow) {
+  if (typeof row.amount_text !== "string" || !/^\d+\.\d{7}$/.test(row.amount_text)) {
+    throw new Error("Invoice amount did not use the exact decimal text projection");
+  }
   return {
-    amount: row.amount,
+    amount: row.amount_text,
     assetIssuer: row.asset_issuer,
     confirmedTransactionHash: row.confirmed_transaction_hash ?? null,
+    createdAt: row.created_at,
     debtorPublicKey: row.debtor_public_key,
     dueAt: row.due_at,
     id: row.id,
     issuerPublicKey: row.issuer_public_key,
     memo: row.memo,
+    preparedPaymentExpiresAt: row.prepared_payment_expires_at ?? null,
+    preparedPaymentHash: row.prepared_payment_hash ?? null,
+    preparedPaymentXdr: row.prepared_payment_xdr ?? null,
     status: row.status,
   };
 }
@@ -89,8 +96,8 @@ export async function findDebtorInvoice(id: string, debtorPublicKey: string) {
   };
 }
 
-export async function confirmInvoice(id: string, transactionHash: string) {
-  const { data, error } = await serverDatabase().rpc("confirm_invoice", { confirmed_at: new Date().toISOString(), invoice_id: id, transaction_hash: transactionHash });
+export async function confirmInvoice(id: string, transactionHash: string, observedAt: string) {
+  const { data, error } = await serverDatabase().rpc("confirm_invoice", { confirmed_at: observedAt, invoice_id: id, transaction_hash: transactionHash });
   if (error) throw new Error("Invoice could not be confirmed");
   return data;
 }
@@ -108,4 +115,23 @@ export async function recordRejectedPayment(invoiceId: string, transactionHash: 
     transaction_hash: transactionHash,
   });
   if (error) throw new Error("Rejected payment attempt could not be recorded");
+}
+
+export async function prepareInvoicePayment(input: {
+  debtorPublicKey: string;
+  expiresAt: string;
+  invoiceId: string;
+  transactionHash: string;
+  xdr: string;
+}) {
+  const { data, error } = await serverDatabase().rpc("prepare_invoice_payment", {
+    debtor_public_key: input.debtorPublicKey,
+    invoice_id: input.invoiceId,
+    payment_expires_at: input.expiresAt,
+    payment_hash: input.transactionHash,
+    payment_xdr: input.xdr,
+    requested_at: new Date().toISOString(),
+  });
+  if (error || !data) throw new Error("Payment could not be prepared safely");
+  return mapInvoiceRow(data as InvoiceRow);
 }

@@ -108,6 +108,7 @@ export async function payInvoiceWithFreighter(
   if (connectedWallet !== input.walletPublicKey) throw new Error("The connected wallet changed");
   input.onStage?.("reviewing");
   reviewInvoicePaymentXdr(input.xdr, input.invoice, connectedWallet);
+  const expectedHash = TransactionBuilder.fromXDR(input.xdr, Networks.TESTNET).hash().toString("hex");
   input.onStage?.("awaiting-signature");
   const signed = await adapter.signTransaction(input.xdr, {
     address: connectedWallet,
@@ -122,6 +123,7 @@ export async function payInvoiceWithFreighter(
   input.onStage?.("submitting");
   const result = await submit(signed.signedTxXdr);
   if (!/^[a-f0-9]{64}$/i.test(result.hash)) throw new Error("Horizon returned an invalid transaction hash");
+  if (result.hash !== expectedHash) throw new Error("Horizon returned an unexpected transaction hash");
   return result.hash;
 }
 
