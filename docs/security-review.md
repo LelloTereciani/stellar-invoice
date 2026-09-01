@@ -1,8 +1,11 @@
 # Security audit — StellarInvoice
 
-**Independent reviewer:** GPT-5.6 Sol, high reasoning  
-**Audited code baseline:** `fafd712d524cdc4c2fddae27625e92097adbc3bb`  
-**Audit date:** 2026-09-01  
+**Independent reviewer:** GPT-5.6 Sol, high reasoning
+
+**Audited code baseline:** `fafd712d524cdc4c2fddae27625e92097adbc3bb`
+
+**Audit date:** 2026-09-01
+
 **Decision:** **DEPLOY-READY** for EasyPanel, Stellar Testnet and fictitious BRLT. No Critical or High finding remains.
 
 This decision covers repository readiness. It does not claim that the VPS is already deployed: public TLS, attached persistent volumes, scheduled backups and a restore executed in the VPS environment remain post-deployment operational evidence.
