@@ -27,7 +27,9 @@ jobs:
       - name: Run browser payment flow
         run: pnpm test:e2e
       - name: Validate operations scripts
-        run: shellcheck infra/*.sh
+        run: |
+          shellcheck infra/*.sh tests/operations/*.sh tests/operations/bin/docker
+          sh tests/operations/backup-failure.sh
       - name: Validate private Compose topology
         run: |
           docker compose --env-file infra/supabase/.env.example --env-file infra/.env.example \
@@ -114,4 +116,4 @@ jobs:
           infra/backup.sh
           backup=$(find "$BACKUP_DIR" -type f -name 'stellar-invoice-*.sql.gz' -print -quit)
           test -n "$backup"
-          infra/restore-check.sh "$backup"
+          infra/restore-check.sh "$backup" postgrest-exact

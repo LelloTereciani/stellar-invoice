@@ -1,16 +1,25 @@
 #!/bin/sh
 set -eu
 
-if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
-  echo "Usage: infra/restore-check.sh /absolute/path/to/backup.sql.gz" >&2
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ] || [ ! -f "$1" ]; then
+  echo "Usage: infra/restore-check.sh /absolute/path/to/backup.sql.gz [expected-memo]" >&2
   exit 1
 fi
+expected_memo=${2:-}
+case "$expected_memo" in *[!A-Za-z0-9-]* ) echo "Expected memo contains unsafe characters" >&2; exit 1 ;; esac
 gzip -t "$1"
 
 project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 restore_container="stellar-invoice-restore-check-$$"
-cleanup() { docker rm --force "$restore_container" >/dev/null 2>&1 || true; }
+restore_sql=$(mktemp)
+cleanup() {
+  rm -f "$restore_sql"
+  docker rm --force "$restore_container" >/dev/null 2>&1 || true
+}
 trap cleanup EXIT INT TERM
+
+gzip -dc "$1" > "$restore_sql"
+[ -s "$restore_sql" ] || { echo "Restored SQL dump is empty" >&2; exit 1; }
 
 docker run --detach --name "$restore_container" --env POSTGRES_PASSWORD=isolated-restore-only postgres:17-alpine >/dev/null
 attempt=0
@@ -22,8 +31,13 @@ done
 
 docker exec -i "$restore_container" psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres < "$project_root/tests/integration/postgres-bootstrap.sql"
 docker exec "$restore_container" psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --command "drop schema public cascade"
-gzip -dc "$1" | docker exec -i "$restore_container" psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres
-docker exec "$restore_container" psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --tuples-only --command \
-  "select case when to_regclass('public.invoices') is not null and to_regclass('public.demo_distributions') is not null then 1 else 0 end" \
-  | grep -q 1
+docker exec -i "$restore_container" psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres < "$restore_sql"
+docker exec -i "$restore_container" psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres \
+  < "$project_root/tests/integration/restore-verification.sql"
+if [ -n "$expected_memo" ]; then
+  restored_count=$(docker exec "$restore_container" psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres \
+    --tuples-only --no-align --command \
+    "select count(*) from public.invoices where memo = '$expected_memo' and amount_text = amount::text")
+  [ "$restored_count" = 1 ] || { echo "Expected restored invoice data is missing or inexact" >&2; exit 1; }
+fi
 echo "Isolated restore check passed."

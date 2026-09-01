@@ -1,0 +1,3 @@
+#!/bin/sh
+# Simulate a failed database client. / Simula uma falha do cliente do banco.
+exit 42

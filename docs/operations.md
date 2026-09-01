@@ -12,9 +12,9 @@ Run `pnpm demo:bootstrap` once with a protected local `demo-wallet.json`. Transf
 
 ## Backup and restore
 
-Schedule `infra/backup.sh` daily with `BACKUP_DIR` pointing to storage outside the repository and Postgres volume. It creates a compressed logical backup of the application `public` schema, validates gzip integrity, and removes only matching backup files older than `BACKUP_RETENTION_DAYS` (14 by default). Encrypt or snapshot that directory according to the VPS policy.
+Schedule `infra/backup.sh` daily with `BACKUP_DIR` pointing to storage outside the repository and Postgres volume. It creates a compressed logical backup of the application `public` schema including its security ACLs, rejects empty/failed dumps, validates gzip integrity, and removes only matching backup files older than `BACKUP_RETENTION_DAYS` (14 by default). Encrypt or snapshot that directory according to the VPS policy.
 
-Quarterly, run `infra/restore-check.sh /absolute/path/to/backup.sql.gz`. It creates a disposable PostgreSQL 17 container, restores the dump, checks the required product tables and always removes the isolated container. A restore check is not a production restore; production recovery requires a maintenance window and a reviewed destination.
+Quarterly, run `infra/restore-check.sh /absolute/path/to/backup.sql.gz`. It creates a disposable PostgreSQL 17 container, restores the dump, checks tables, RLS and effective table/RPC privileges, and always removes the isolated container. CI additionally verifies a data sentinel and its exact decimal projection. A restore check is not a production restore; production recovery requires a maintenance window and a reviewed destination.
 
 ## Rollback
 
