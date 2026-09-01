@@ -116,7 +116,21 @@ jobs:
           infra/backup.sh
           backup=$(find "$BACKUP_DIR" -type f -name 'stellar-invoice-*.sql.gz' -print -quit)
           test -n "$backup"
-          if ! restore_output=$(infra/restore-check.sh "$backup" postgrest-exact 2>&1); then
+          restore_output=''
+          restore_passed=false
+          for restore_attempt in 1 2 3; do
+            if attempt_output=$(infra/restore-check.sh "$backup" postgrest-exact 2>&1); then
+              restore_output=$attempt_output
+              restore_passed=true
+              break
+            fi
+            restore_output=$(printf '%s\nRestore attempt %s failed:\n%s' "$restore_output" "$restore_attempt" "$attempt_output")
+            case "$attempt_output" in
+              *'connection to server'* ) sleep 2 ;;
+              * ) break ;;
+            esac
+          done
+          if [ "$restore_passed" != true ]; then
             printf '%s\n' "$restore_output"
             annotation=$(printf '%s\n' "$restore_output" | tail -n 30 | sed 's/%/%25/g; s/\r/%0D/g' | awk 'BEGIN { ORS="%0A" } { print }')
             echo "::error file=infra/restore-check.sh::$annotation"
