@@ -19,7 +19,11 @@ timestamp=$(date -u +%Y%m%dT%H%M%SZ)
 destination="$backup_dir/stellar-invoice-$timestamp.sql.gz"
 
 if [ "${BACKUP_LOCAL_POSTGRES:-disabled}" = "enabled" ]; then
-  pg_dump --schema public --format plain --no-owner --no-privileges | gzip -9 > "$destination"
+  # Match the PostgreSQL 17 server client in CI. / Use o cliente da mesma versão 17 do servidor no CI.
+  docker run --rm --network host \
+    --env PGHOST --env PGPORT --env PGDATABASE --env PGUSER --env PGPASSWORD \
+    postgres:17-alpine pg_dump --schema public --format plain --no-owner --no-privileges \
+    | gzip -9 > "$destination"
 else
   docker compose --env-file "$environment_file" -f "$supabase_dir/docker-compose.yml" \
     exec -T db pg_dump --username postgres --dbname postgres --schema public --format plain --no-owner --no-privileges \
