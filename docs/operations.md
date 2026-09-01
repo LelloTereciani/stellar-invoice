@@ -2,7 +2,9 @@
 
 ## Deployment gate
 
-Use the three Compose files together, in this order: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/supabase/docker-compose.app.yml`. Set all values from `infra/supabase/.env.example` plus `infra/.env.example` in EasyPanel; never use template defaults or commit the resulting files. `infra/preflight.sh` accepts a combined local environment file and refuses template values or published services other than Caddy.
+For EasyPanel, use only `docker-compose.easypanel.yml` and route its primary domain to `app:3000`; the platform owns TLS and no Compose service publishes host ports. Assign the primary domain before the final deploy, set `APP_ORIGIN=https://$(PRIMARY_DOMAIN)` and `APP_DOMAIN=$(PRIMARY_DOMAIN)`, then run `infra/preflight.sh /absolute/path/to/combined.env easypanel`. If the domain was assigned after an initial deploy, redeploy before testing any mutating route. Never use template defaults or commit the resulting environment file.
+
+For a generic VPS without EasyPanel's proxy, use the three Compose files together, in this order: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/supabase/docker-compose.app.yml`. `infra/preflight.sh` accepts a combined local environment file and refuses template values or published services other than Caddy.
 
 Only Caddy may publish ports 80 and 443. Confirm `docker compose config` contains no public Supabase, Postgres, Studio or pooler port.
 
@@ -12,7 +14,9 @@ Run `pnpm demo:bootstrap` once with a protected local `demo-wallet.json`. Transf
 
 ## Backup and restore
 
-Schedule `infra/backup.sh` daily with `BACKUP_DIR` pointing to storage outside the repository and Postgres volume. It creates a compressed logical backup of the application `public` schema including its security ACLs, rejects empty/failed dumps, validates gzip integrity, and removes only matching backup files older than `BACKUP_RETENTION_DAYS` (14 by default). Encrypt or snapshot that directory according to the VPS policy.
+On EasyPanel, the private `backup` sidecar runs at startup and daily, and writes to the separate `postgres-backups` named volume. It creates a compressed logical backup of the application `public` schema including its security ACLs, rejects empty/failed dumps, validates gzip integrity, and removes only matching backup files older than `BACKUP_RETENTION_DAYS` (14 by default). Configure encrypted offsite export or platform/VPS snapshots of that volume; keeping the only backup on the application VPS does not provide disaster recovery.
+
+On a generic VPS, schedule `infra/backup.sh` daily with `BACKUP_DIR` pointing to persistent storage outside the repository and Postgres volume. This host-side script uses the same audited logical format. `BACKUP_DIR` applies to the generic VPS flow; EasyPanel uses the `postgres-backups` volume instead.
 
 Quarterly, run `infra/restore-check.sh /absolute/path/to/backup.sql.gz`. It creates a disposable PostgreSQL 17 container, restores the dump, checks tables, RLS and effective table/RPC privileges, and always removes the isolated container. CI additionally verifies a data sentinel and its exact decimal projection. A restore check is not a production restore; production recovery requires a maintenance window and a reviewed destination.
 

@@ -30,6 +30,9 @@ jobs:
         run: |
           shellcheck infra/*.sh tests/operations/*.sh tests/operations/bin/docker
           sh tests/operations/backup-failure.sh
+          sh tests/operations/easypanel-backup.sh
+          sh tests/operations/easypanel-compose.sh
+          sh tests/operations/easypanel-preflight.sh
       - name: Validate private Compose topology
         run: |
           docker compose --env-file infra/supabase/.env.example --env-file infra/.env.example \
@@ -110,10 +113,15 @@ jobs:
           test "$(jq -r '.[0].amount_text' <<<"$response")" = '1234567890123.1234567'
       - name: Prove logical backup and isolated restore
         env:
-          BACKUP_DIR: /tmp/stellar-invoice-backups
-          BACKUP_LOCAL_POSTGRES: enabled
+          BACKUP_DIR: /tmp/stellar-invoice-easypanel-backups
         run: |
-          infra/backup.sh
+          mkdir -p "$BACKUP_DIR"
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
+            --volume "$PWD/infra/easypanel-backup.sh:/usr/local/bin/easypanel-backup.sh:ro" \
+            --volume "$BACKUP_DIR:/backups" \
+            --env PGHOST --env PGPORT --env PGDATABASE --env PGUSER --env PGPASSWORD \
+            --env BACKUP_DIR=/backups --env BACKUP_RUN_ONCE=enabled \
+            postgres:17-alpine /bin/sh /usr/local/bin/easypanel-backup.sh
           backup=$(find "$BACKUP_DIR" -type f -name 'stellar-invoice-*.sql.gz' -print -quit)
           test -n "$backup"
           restore_output=''
