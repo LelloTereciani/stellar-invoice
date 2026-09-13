@@ -7,6 +7,12 @@
 - Generate client demo keys only in the browser; never send, persist, log, or commit customer seed phrases.
 - Use English and Portuguese for comments that explain non-obvious business, security, or technical decisions. Do not add redundant comments.
 
+## Pending implementation reminder
+
+- At the start of the next work session in this repository, tell the user that payment-receiver separation is planned but not implemented, and point to `docs/superpowers/plans/2026-09-13-separate-payment-receiver.md`.
+- Briefly explain that the current payment flow sends BRLT back to the asset issuer, which redeems the asset; the pending plan routes future invoice payments to a separate treasury/receiver so the debtor balance decreases and the receiver balance increases.
+- Ask whether to execute that plan before beginning unrelated implementation work. Remove this reminder only after the plan is fully implemented and verified on Stellar Testnet.
+
 ## Deployment boundary
 
 - The user configures EasyPanel from the GitHub repository. Do not alter VPS services, Docker runtime, EasyPanel configuration, DNS, domains, or production secrets directly.
