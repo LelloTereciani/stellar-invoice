@@ -1,3 +1,4 @@
+import { Keypair } from "@stellar/stellar-sdk";
 import { describe, expect, it } from "vitest";
 
 import { loadDemoConfig, loadDemoDistributionConfig, loadStellarConfig, requireServerEnv } from "../app/lib/config.js";
@@ -103,5 +104,34 @@ describe("loadDemoDistributionConfig", () => {
         STELLAR_DISTRIBUTION_SECRET: "not-a-stellar-secret-key",
       }),
     ).toThrow("Demo distribution configuration contains an invalid Stellar key");
+  });
+
+  it("rejects a payment receiver that differs from the demo distributor", () => {
+    const distributor = Keypair.random();
+
+    expect(() =>
+      loadDemoDistributionConfig({
+        DEMO_MODE: "enabled",
+        NEXT_PUBLIC_STELLAR_ISSUER: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+        STELLAR_DISTRIBUTION_SECRET: distributor.secret(),
+        STELLAR_PAYMENT_RECEIVER: Keypair.random().publicKey(),
+      }),
+    ).toThrow("Demo payment receiver must match the distribution account");
+  });
+
+  it("returns the matching receiver derived from the demo distribution account", () => {
+    const distributor = Keypair.random();
+    const distributionPublicKey = distributor.publicKey();
+
+    expect(
+      loadDemoDistributionConfig({
+        DEMO_MODE: "enabled",
+        NEXT_PUBLIC_STELLAR_ISSUER: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+        STELLAR_DISTRIBUTION_SECRET: distributor.secret(),
+        STELLAR_PAYMENT_RECEIVER: distributionPublicKey,
+      }),
+    ).toMatchObject({ distributionPublicKey, receiverPublicKey: distributionPublicKey });
   });
 });
