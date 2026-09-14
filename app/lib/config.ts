@@ -2,9 +2,10 @@ import { Keypair } from "@stellar/stellar-sdk";
 
 import { STELLAR_TESTNET } from "./stellar/network.js";
 
-type PublicEnvironment = Record<string, string | undefined> & {
+type StellarEnvironment = Record<string, string | undefined> & {
   NEXT_PUBLIC_STELLAR_ISSUER?: string;
   NEXT_PUBLIC_STELLAR_NETWORK?: string;
+  STELLAR_PAYMENT_RECEIVER?: string;
 };
 
 type ServerEnvironment = Record<string, string | undefined>;
@@ -18,6 +19,7 @@ export type StellarConfig = {
   assetCode: "BRLT";
   horizonUrl: string;
   issuerPublicKey: string;
+  receiverPublicKey: string;
   network: "testnet";
   networkPassphrase: string;
 };
@@ -65,7 +67,7 @@ export function loadDemoDistributionConfig(environment: ServerEnvironment & Demo
   return { distributionSecret, issuerPublicKey };
 }
 
-export function loadStellarConfig(environment: PublicEnvironment): StellarConfig {
+export function loadStellarConfig(environment: StellarEnvironment): StellarConfig {
   if (environment.NEXT_PUBLIC_STELLAR_NETWORK !== "testnet") {
     throw new Error("StellarInvoice accepts only Stellar Testnet");
   }
@@ -75,16 +77,28 @@ export function loadStellarConfig(environment: PublicEnvironment): StellarConfig
     throw new Error("Missing required environment variable: NEXT_PUBLIC_STELLAR_ISSUER");
   }
 
+  const receiverPublicKey = environment.STELLAR_PAYMENT_RECEIVER;
+  if (!receiverPublicKey) {
+    throw new Error("Missing required environment variable: STELLAR_PAYMENT_RECEIVER");
+  }
+
   try {
     Keypair.fromPublicKey(issuerPublicKey);
   } catch {
     throw new Error("NEXT_PUBLIC_STELLAR_ISSUER must be a valid Stellar public key");
   }
 
+  try {
+    Keypair.fromPublicKey(receiverPublicKey);
+  } catch {
+    throw new Error("STELLAR_PAYMENT_RECEIVER must be a valid Stellar public key");
+  }
+
   return {
     assetCode: "BRLT",
     horizonUrl: STELLAR_TESTNET.horizonUrl,
     issuerPublicKey,
+    receiverPublicKey,
     network: STELLAR_TESTNET.network,
     networkPassphrase: STELLAR_TESTNET.networkPassphrase,
   };

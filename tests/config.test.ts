@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadDemoConfig, loadStellarConfig, requireServerEnv } from "../app/lib/config.js";
+import { loadDemoConfig, loadDemoDistributionConfig, loadStellarConfig, requireServerEnv } from "../app/lib/config.js";
 
 describe("loadStellarConfig", () => {
   it("rejects a configuration that points to a network other than Stellar Testnet", () => {
@@ -20,16 +20,47 @@ describe("loadStellarConfig", () => {
     ).toThrow("Missing required environment variable: NEXT_PUBLIC_STELLAR_ISSUER");
   });
 
+  it("rejects an invalid issuer public key instead of accepting a malformed asset identity", () => {
+    expect(() =>
+      loadStellarConfig({
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+        NEXT_PUBLIC_STELLAR_ISSUER: "not-a-stellar-public-key",
+        STELLAR_PAYMENT_RECEIVER: "GAHRN27DIWCP7J3OFLE4NY7GF2FJUAWQ2MJJZQYS6JCP2QBPXBW2IB73",
+      }),
+    ).toThrow("NEXT_PUBLIC_STELLAR_ISSUER must be a valid Stellar public key");
+  });
+
+  it("rejects a missing payment receiver instead of building an invoice without a destination", () => {
+    expect(() =>
+      loadStellarConfig({
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+        NEXT_PUBLIC_STELLAR_ISSUER: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+      }),
+    ).toThrow("Missing required environment variable: STELLAR_PAYMENT_RECEIVER");
+  });
+
+  it("rejects an invalid payment receiver instead of accepting a malformed destination", () => {
+    expect(() =>
+      loadStellarConfig({
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+        NEXT_PUBLIC_STELLAR_ISSUER: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+        STELLAR_PAYMENT_RECEIVER: "not-a-stellar-public-key",
+      }),
+    ).toThrow("STELLAR_PAYMENT_RECEIVER must be a valid Stellar public key");
+  });
+
   it("returns a Testnet-only BRLT identity when its public configuration is valid", () => {
     expect(
       loadStellarConfig({
         NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
         NEXT_PUBLIC_STELLAR_ISSUER: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+        STELLAR_PAYMENT_RECEIVER: "GAHRN27DIWCP7J3OFLE4NY7GF2FJUAWQ2MJJZQYS6JCP2QBPXBW2IB73",
       }),
     ).toMatchObject({
       assetCode: "BRLT",
       network: "testnet",
       issuerPublicKey: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+      receiverPublicKey: "GAHRN27DIWCP7J3OFLE4NY7GF2FJUAWQ2MJJZQYS6JCP2QBPXBW2IB73",
     });
   });
 });
@@ -59,5 +90,18 @@ describe("loadDemoConfig", () => {
         NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
       }),
     ).toEqual({ enabled: true, network: "testnet" });
+  });
+});
+
+describe("loadDemoDistributionConfig", () => {
+  it("rejects an invalid distribution secret instead of deriving a malformed distributor public key", () => {
+    expect(() =>
+      loadDemoDistributionConfig({
+        DEMO_MODE: "enabled",
+        NEXT_PUBLIC_STELLAR_ISSUER: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+        NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+        STELLAR_DISTRIBUTION_SECRET: "not-a-stellar-secret-key",
+      }),
+    ).toThrow("Demo distribution configuration contains an invalid Stellar key");
   });
 });
