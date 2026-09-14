@@ -141,6 +141,7 @@ test("reuses a stored wallet that was saved before initial demo provisioning com
 test("reviews and signs the exact demo invoice in the browser before verification", async ({ page }) => {
   const wallet = Keypair.random();
   const issuer = Keypair.random().publicKey();
+  const receiver = Keypair.random().publicKey();
   const invoice = {
     amount: "5.0000000",
     assetIssuer: issuer,
@@ -155,27 +156,36 @@ test("reviews and signs the exact demo invoice in the browser before verificatio
     preparedPaymentHash: null,
     preparedPaymentXdr: null,
     rejectedAttempts: [],
+    receiverPublicKey: receiver,
     status: "pending",
   };
-  const xdr = new TransactionBuilder(new Account(wallet.publicKey(), "10"), { fee: "100", networkPassphrase: Networks.TESTNET })
+  const issuerDestinationXdr = new TransactionBuilder(new Account(wallet.publicKey(), "10"), { fee: "100", networkPassphrase: Networks.TESTNET })
     .addMemo(Memo.text(invoice.memo))
     .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuer), destination: issuer }))
     .setTimeout(180)
     .build()
     .toXDR();
-  const transactionHash = TransactionBuilder.fromXDR(xdr, Networks.TESTNET).hash().toString("hex");
+  const receiverDestinationXdr = new TransactionBuilder(new Account(wallet.publicKey(), "10"), { fee: "100", networkPassphrase: Networks.TESTNET })
+    .addMemo(Memo.text(invoice.memo))
+    .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuer), destination: receiver }))
+    .setTimeout(180)
+    .build()
+    .toXDR();
+  const transactionHash = TransactionBuilder.fromXDR(receiverDestinationXdr, Networks.TESTNET).hash().toString("hex");
   let horizonSubmissions = 0;
-  let verificationAttempts = 0;
+  let paymentPreparations = 0;
 
   await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), { key: DEMO_STORAGE_KEY, secret: wallet.secret() });
   await page.route(/\/api\/invoices\/demo-invoice$/, async (route) => route.fulfill({ body: JSON.stringify(invoice), contentType: "application/json" }));
-  await page.route(/\/api\/invoices\/demo-invoice\/payment$/, async (route) => route.fulfill({ body: JSON.stringify({ preparedTransactionHash: transactionHash, xdr }), contentType: "application/json" }));
-  await page.route(/\/api\/invoices\/demo-invoice\/verify$/, async (route) => {
-    verificationAttempts += 1;
-    await route.fulfill(verificationAttempts === 1
-      ? { body: JSON.stringify({ error: "Temporary verification failure" }), contentType: "application/json", status: 503 }
-      : { body: JSON.stringify({ status: "confirmed" }), contentType: "application/json" });
+  await page.route(/\/api\/invoices\/demo-invoice\/payment$/, async (route) => {
+    paymentPreparations += 1;
+    const preparedXdr = paymentPreparations === 1 ? issuerDestinationXdr : receiverDestinationXdr;
+    await route.fulfill({
+      body: JSON.stringify({ preparedTransactionHash: TransactionBuilder.fromXDR(preparedXdr, Networks.TESTNET).hash().toString("hex"), xdr: preparedXdr }),
+      contentType: "application/json",
+    });
   });
+  await page.route(/\/api\/invoices\/demo-invoice\/verify$/, async (route) => route.fulfill({ body: JSON.stringify({ status: "confirmed" }), contentType: "application/json" }));
   await page.route("https://horizon-testnet.stellar.org/transactions", async (route) => {
     horizonSubmissions += 1;
     const encoded = new URLSearchParams(route.request().postData() ?? "").get("tx");
@@ -186,16 +196,24 @@ test("reviews and signs the exact demo invoice in the browser before verificatio
 
   await page.goto("/invoices/demo-invoice");
   await expect(page.getByText("5.0000000 BRLT", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Emissor do ativo BRLT", { exact: true })).toBeVisible();
+  await expect(page.getByText("Conta recebedora da fatura", { exact: true })).toBeVisible();
+  await expect(page.getByText("Devedor — origem exata", { exact: true })).toBeVisible();
   await expect(page.getByText(wallet.publicKey(), { exact: true }).first()).toBeVisible();
   await expect(page.getByText(issuer, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(receiver, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("demo-payment", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Stellar Testnet", { exact: true }).first()).toBeVisible();
   const pay = page.getByRole("button", { name: "Revisar e assinar pagamento →" });
   await expect(pay).toBeEnabled();
   await pay.click();
-  await expect(page.getByText("Temporary verification failure")).toBeVisible();
+  await expect(page.getByText("Payment XDR does not match the invoice")).toBeVisible();
+  expect(horizonSubmissions).toBe(0);
   await expect(pay).toBeEnabled();
   await pay.click();
   await expect(page.getByText("Pagamento confirmado no ledger da Stellar.")).toBeVisible();
   await expect(page.getByText(transactionHash, { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Abrir no Stellar Expert ↗" })).toHaveAttribute("href", `https://stellar.expert/explorer/testnet/tx/${transactionHash}`);
   expect(horizonSubmissions).toBe(1);
+  expect(paymentPreparations).toBe(2);
 });

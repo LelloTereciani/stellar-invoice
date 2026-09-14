@@ -1,8 +1,20 @@
 # Stellar Testnet evidence
 
-On 2026-09-01, `pnpm evidence:testnet` completed a disposable end-to-end journey against the public Stellar Testnet: Friendbot funding, BRLT trustline, BRLT distribution, invoice payment, Horizon retrieval and validation by the application's payment verifier.
+## Separate receiver evidence — pending after redeploy
 
-Em 2026-09-01, `pnpm evidence:testnet` concluiu uma jornada descartável ponta a ponta na Stellar Testnet pública: financiamento via Friendbot, trustline BRLT, distribuição BRLT, pagamento da fatura, leitura no Horizon e validação pelo verificador da aplicação.
+Fresh public Testnet evidence for the separate payment receiver is intentionally pending. The application and reproducible `pnpm evidence:testnet` path now model three roles: BRLT issuer, treasury/receiver and customer. A valid fresh run must occur only after migration `0018`, the receiver environment variable and the new application build have been deployed. It must prove treasury `-25 BRLT`, customer `+25 BRLT`, then customer `25 -> 20 BRLT` and treasury `+5 BRLT`, while the issuer has no trustline for its own asset. No hashes are recorded here until that deployed run exists.
+
+A nova evidência pública da Testnet para o recebedor separado está deliberadamente pendente. O aplicativo e o caminho reproduzível `pnpm evidence:testnet` agora representam três papéis: emissor BRLT, tesouraria/recebedor e cliente. A nova execução válida só deve ocorrer após o deploy da migration `0018`, da variável do recebedor e do novo build. Ela deve provar tesouraria `-25 BRLT`, cliente `+25 BRLT`, depois cliente `25 -> 20 BRLT` e tesouraria `+5 BRLT`, mantendo o emissor sem trustline do próprio ativo. Nenhum hash será registrado antes dessa execução implantada.
+
+The evidence command reads the ignored issuer/distributor wallet file, derives the treasury receiver from the distributor, creates a new customer only in memory, and prints only public account keys, public transaction hashes and the measured balance transitions. It never prints or persists the customer seed.
+
+## Legacy evidence — 2026-09-01 (issuer destination)
+
+The evidence below predates receiver separation and is retained only as historical proof of the former issuer-destination flow. It must not be cited as proof of migration `0018` or of treasury receipt.
+
+On 2026-09-01, the then-current `pnpm evidence:testnet` completed a disposable end-to-end journey against the public Stellar Testnet: Friendbot funding, BRLT trustline, BRLT distribution, invoice payment to the issuer, Horizon retrieval and validation by the application's payment verifier.
+
+Em 2026-09-01, a versão então existente de `pnpm evidence:testnet` concluiu uma jornada descartável ponta a ponta na Stellar Testnet pública: financiamento via Friendbot, trustline BRLT, distribuição BRLT, pagamento da fatura ao emissor, leitura no Horizon e validação pelo verificador da aplicação.
 
 - Customer / cliente: `GAALB75R7EQYLXQH4V246Y5XGX67AWBEM2AFPQEMA2Z7WYQVVUX6S4HN`
 - Issuer / emissor: `GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY`

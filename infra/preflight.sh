@@ -16,7 +16,7 @@ if [ ! -f "$environment_file" ]; then
   exit 1
 fi
 
-for required in APP_DOMAIN APP_ORIGIN SESSION_SECRET NEXT_PUBLIC_STELLAR_ISSUER SERVICE_ROLE_KEY POSTGRES_PASSWORD JWT_SECRET ANON_KEY DASHBOARD_PASSWORD SECRET_KEY_BASE REALTIME_DB_ENC_KEY VAULT_ENC_KEY PG_META_CRYPTO_KEY LOGFLARE_PUBLIC_ACCESS_TOKEN LOGFLARE_PRIVATE_ACCESS_TOKEN S3_PROTOCOL_ACCESS_KEY_ID S3_PROTOCOL_ACCESS_KEY_SECRET; do
+for required in APP_DOMAIN APP_ORIGIN SESSION_SECRET NEXT_PUBLIC_STELLAR_ISSUER STELLAR_PAYMENT_RECEIVER SERVICE_ROLE_KEY POSTGRES_PASSWORD JWT_SECRET ANON_KEY DASHBOARD_PASSWORD SECRET_KEY_BASE REALTIME_DB_ENC_KEY VAULT_ENC_KEY PG_META_CRYPTO_KEY LOGFLARE_PUBLIC_ACCESS_TOKEN LOGFLARE_PRIVATE_ACCESS_TOKEN S3_PROTOCOL_ACCESS_KEY_ID S3_PROTOCOL_ACCESS_KEY_SECRET; do
   if ! grep -Eq "^${required}=.+" "$environment_file"; then
     echo "Missing required deployment variable: $required" >&2
     exit 1
@@ -61,6 +61,10 @@ if ! grep -Eq '^NEXT_PUBLIC_STELLAR_ISSUER=G[A-Z2-7]{55}$' "$environment_file"; 
   echo "NEXT_PUBLIC_STELLAR_ISSUER must be a valid public Stellar account" >&2
   exit 1
 fi
+if ! grep -Eq '^STELLAR_PAYMENT_RECEIVER=G[A-Z2-7]{55}$' "$environment_file"; then
+  echo "STELLAR_PAYMENT_RECEIVER must be a valid public Stellar account" >&2
+  exit 1
+fi
 demo_mode=$(sed -n 's/^DEMO_MODE=//p' "$environment_file" | tail -n 1)
 if [ "$demo_mode" = "enabled" ] && ! grep -Eq '^STELLAR_DISTRIBUTION_SECRET=S[A-Z2-7]{55}$' "$environment_file"; then
   echo "Enabled demo mode requires a valid STELLAR_DISTRIBUTION_SECRET" >&2
@@ -83,7 +87,7 @@ if [ "$deployment_target" = easypanel ]; then
   fixed_names=$(printf '%s' "$topology" | jq -r '.services | to_entries[] | select(.value.container_name != null) | .key')
   [ -z "$fixed_names" ] || { echo "EasyPanel services must not fix container names: $fixed_names" >&2; exit 1; }
   migration_count=$(printf '%s' "$topology" | jq '[.services.db.volumes[] | select(.target | test("/zzz-stellar-invoice-[0-9]{4}\\.sql$"))] | length')
-  [ "$migration_count" -eq 17 ] || { echo "EasyPanel topology must mount all 17 application migrations" >&2; exit 1; }
+  [ "$migration_count" -eq 18 ] || { echo "EasyPanel topology must mount all 18 application migrations" >&2; exit 1; }
 
   echo "EasyPanel deployment preflight passed; route the primary HTTPS domain to app:3000."
   exit 0

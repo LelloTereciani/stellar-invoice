@@ -73,6 +73,7 @@ services:
       PORT: 3000
       SESSION_SECRET: ${SESSION_SECRET}
       STELLAR_DISTRIBUTION_SECRET: ${STELLAR_DISTRIBUTION_SECRET}
+      STELLAR_PAYMENT_RECEIVER: ${STELLAR_PAYMENT_RECEIVER}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       SUPABASE_URL: http://api-gw:8000
     expose:
@@ -360,6 +361,13 @@ services:
         read_only: true
         source: ./supabase/migrations/0017_demo_session_recovery.sql
         target: /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0017.sql
+        type: bind
+      - bind:
+          create_host_path: true
+          selinux: Z
+        read_only: true
+        source: ./supabase/migrations/0018_invoice_payment_receiver.sql
+        target: /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0018.sql
         type: bind
   functions:
     command:

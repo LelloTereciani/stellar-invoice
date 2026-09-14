@@ -6,6 +6,8 @@ For EasyPanel, use only `docker-compose.easypanel.yml` and route its primary dom
 
 For a generic VPS without EasyPanel's proxy, use the three Compose files together, in this order: `infra/supabase/docker-compose.yml`, `infra/supabase/docker-compose.stellar-invoice.yml` and `infra/supabase/docker-compose.app.yml`. `infra/preflight.sh` accepts a combined local environment file and refuses template values or published services other than Caddy.
 
+Set the required server-only `STELLAR_PAYMENT_RECEIVER` to the public `G...` key derived from `STELLAR_DISTRIBUTION_SECRET`. The application rejects demo distribution if those accounts differ. The receiver is a public identifier but remains runtime server configuration; do not rename it with `NEXT_PUBLIC_`, and never place the distribution seed in a public variable.
+
 Only Caddy may publish ports 80 and 443. Confirm `docker compose config` contains no public Supabase, Postgres, Studio or pooler port.
 
 ## Bootstrap
@@ -26,7 +28,7 @@ Pin the previously known-good Git commit in EasyPanel and redeploy it. Do not ro
 
 ## New and existing database volumes
 
-All seventeen product migrations are mounted into the official Supabase initialization directory and run in order on a new volume. Existing volumes do not replay init scripts: apply only the newly reviewed migration files during a maintenance window, verify the GitHub `database` job, back up first, and never delete the volume as an upgrade mechanism.
+All eighteen product migrations are mounted into the official Supabase initialization directory and run in order on a new volume. Existing volumes do not replay init scripts: apply only the newly reviewed migration files during a maintenance window, verify the GitHub `database` job, back up first, and never delete the volume as an upgrade mechanism.
 
 For an existing EasyPanel database created before migrations `0016` and `0017`, first confirm a recent validated backup, deploy the reviewed Compose so both migrations are mounted, then open the private `db` service terminal and run them in order:
 
@@ -42,3 +44,21 @@ psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --tuples-only -
 ```
 
 All three results must be `t` before retesting the public demo.
+
+### Applying migration 0018 to an existing volume
+
+Migration `0018_invoice_payment_receiver.sql` is additive for invoice data: it first adds `receiver_public_key`, backfills historical rows with their former issuer destination, then makes the column required. It also replaces the demo-invoice RPC with the receiver-aware signature. Before applying it, create and validate a current logical backup as described above and schedule a maintenance window. Do not delete or recreate `postgres-data`.
+
+After deploying the reviewed Compose so migration `0018` is mounted, open only the private `db` service terminal and run once:
+
+```sh
+psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --file /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0018.sql
+```
+
+Verify the non-null backfill, function replacement and effective RPC privileges:
+
+```sh
+psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --command "select count(*) filter (where receiver_public_key is null) as missing_receivers from public.invoices; select to_regprocedure('public.ensure_demo_invoice(text,text,numeric,text,timestamptz)') is null as old_signature_removed, to_regprocedure('public.ensure_demo_invoice(text,text,text,numeric,text,timestamptz)') is not null as new_signature_installed; select has_function_privilege('anon','public.ensure_demo_invoice(text,text,text,numeric,text,timestamptz)','EXECUTE') as anon_execute, has_function_privilege('authenticated','public.ensure_demo_invoice(text,text,text,numeric,text,timestamptz)','EXECUTE') as authenticated_execute, has_function_privilege('service_role','public.ensure_demo_invoice(text,text,text,numeric,text,timestamptz)','EXECUTE') as service_role_execute;"
+```
+
+Expected results are `missing_receivers = 0`, old signature `t`, new signature `t`, then privileges `f`, `f`, `t`. Restart/redeploy the application only after setting `STELLAR_PAYMENT_RECEIVER` to the distributor-derived public key. Finally, use a brand-new browser demo session and record fresh Horizon Testnet evidence; the legacy hashes in `docs/testnet-evidence.md` do not verify this migration.

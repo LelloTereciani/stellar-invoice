@@ -25,12 +25,13 @@ vi.mock("../../app/lib/demo/persistent-session.js", () => ({
 
 const debtorPublicKey = Keypair.random().publicKey();
 const issuerPublicKey = Keypair.random().publicKey();
+const receiverPublicKey = Keypair.random().publicKey();
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.requireServerEnv.mockReturnValue("https://invoice.example.com");
   mocks.requireWalletSession.mockReturnValue({ network: "testnet", walletPublicKey: debtorPublicKey });
-  mocks.loadStellarConfig.mockReturnValue({ assetCode: "BRLT", issuerPublicKey, network: "testnet" });
+  mocks.loadStellarConfig.mockReturnValue({ assetCode: "BRLT", issuerPublicKey, network: "testnet", receiverPublicKey });
   mocks.ensureDemoInvoice.mockResolvedValue({ id: "00000000-0000-4000-8000-000000000123" });
 });
 
@@ -46,7 +47,7 @@ describe("demo resume API", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ invoiceId: "00000000-0000-4000-8000-000000000123" });
-    expect(mocks.ensureDemoInvoice).toHaveBeenCalledWith(debtorPublicKey, issuerPublicKey);
+    expect(mocks.ensureDemoInvoice).toHaveBeenCalledWith(debtorPublicKey, issuerPublicKey, receiverPublicKey);
   });
 
   it("reports that an authenticated wallet still needs initial provisioning", async () => {

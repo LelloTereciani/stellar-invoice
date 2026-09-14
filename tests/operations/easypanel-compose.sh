@@ -54,6 +54,7 @@ backup_volume=$(printf '%s' "$topology" | jq -r '.services.backup.volumes[] | se
 
 [ "$(printf '%s' "$topology" | jq -r '.services.app.environment.HOSTNAME')" = 0.0.0.0 ] || { echo "App must listen on every container interface" >&2; exit 1; }
 [ "$(printf '%s' "$topology" | jq -r '.services.app.environment.SUPABASE_URL')" = http://api-gw:8000 ] || { echo "App must use private Supabase routing" >&2; exit 1; }
+[ "$(printf '%s' "$topology" | jq -r '.services.app.environment.STELLAR_PAYMENT_RECEIVER')" = "$(sed -n 's/^STELLAR_PAYMENT_RECEIVER=//p' "$project_root/infra/.env.example" | tail -n 1)" ] || { echo "App must receive the configured payment receiver" >&2; exit 1; }
 [ "$(printf '%s' "$topology" | jq -r '.services.backup.environment.PGHOST')" = db ] || { echo "Backup must use the private PostgreSQL service" >&2; exit 1; }
 [ "$(printf '%s' "$topology" | jq -r '.services.backup.environment.BACKUP_DIR')" = /backups ] || { echo "Backup must write only to its mounted volume" >&2; exit 1; }
 
@@ -61,6 +62,6 @@ fixed_names=$(printf '%s' "$topology" | jq -r '.services | to_entries[] | select
 [ -z "$fixed_names" ] || { echo "EasyPanel Compose must not fix container names: $fixed_names" >&2; exit 1; }
 
 migration_count=$(printf '%s' "$topology" | jq '[.services.db.volumes[] | select(.target | test("/zzz-stellar-invoice-[0-9]{4}\\.sql$"))] | length')
-[ "$migration_count" -eq 17 ] || { echo "Expected all 17 application migrations, found $migration_count" >&2; exit 1; }
+[ "$migration_count" -eq 18 ] || { echo "Expected all 18 application migrations, found $migration_count" >&2; exit 1; }
 
 echo "Single-file EasyPanel topology passed."

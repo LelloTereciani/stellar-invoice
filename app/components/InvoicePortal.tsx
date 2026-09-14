@@ -45,7 +45,7 @@ export function InvoicePortal() {
           <div className="demo-callout"><p className="kicker">AMBIENTE DE DEMONSTRAÇÃO</p><h3>Teste sem configurar uma carteira</h3><p>Cria uma chave Testnet descartável somente neste navegador, usa o faucet e provisiona BRLT fictício.</p><DemoStarter /></div>
         </section>
         <section className="panel welcome-panel">
-          <div><p className="kicker">FLUXO VERIFICÁVEL</p><h2>Da fatura ao ledger</h2><p>Escolha uma fatura para revisar valor, ativo, emissor, destino, memo e vencimento antes de qualquer assinatura.</p></div>
+          <div><p className="kicker">FLUXO VERIFICÁVEL</p><h2>Da fatura ao ledger</h2><p>Escolha uma fatura para revisar valor, ativo, emissor, conta recebedora, memo e vencimento antes de qualquer assinatura.</p></div>
           <ol className="process-list"><li><span>01</span><div><strong>Autentique</strong><p>Prove posse da carteira com uma mensagem de uso único.</p></div></li><li><span>02</span><div><strong>Revise e assine</strong><p>A transação é construída para o devedor e assinada somente no navegador.</p></div></li><li><span>03</span><div><strong>Verifique</strong><p>O servidor confirma cada campo contra o ledger Testnet.</p></div></li></ol>
           <div className="testnet-stamp"><span>TESTNET</span><strong>BRLT FICTÍCIO</strong><small>SEM VALOR REAL</small></div>
         </section>

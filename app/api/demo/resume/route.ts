@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   try {
     const stellar = loadStellarConfig(process.env);
-    const invoice = await ensureDemoInvoice(session.walletPublicKey, stellar.issuerPublicKey);
+    const invoice = await ensureDemoInvoice(session.walletPublicKey, stellar.issuerPublicKey, stellar.receiverPublicKey);
     return NextResponse.json({ invoiceId: invoice.id });
   } catch (error: unknown) {
     const code = error instanceof Error && "code" in error && typeof error.code === "string"

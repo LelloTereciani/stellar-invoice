@@ -10,7 +10,7 @@ O template oficial Docker do Supabase está versionado neste diretório a partir
 2. Set **Docker Compose File** to the single root file `docker-compose.easypanel.yml`. Do not enter the three generic-VPS overlay files in EasyPanel.
 3. Create the required environment values from `infra/supabase/.env.example` plus `infra/.env.example`. Generate all secrets with `infra/supabase/utils/generate-keys.sh` and `infra/supabase/utils/add-new-auth-keys.sh`; never retain their output in Git, browser logs, or chat.
 4. Add the domain to internal service **`app`**, protocol **HTTP**, target port **`3000`**, and mark it primary. EasyPanel owns HTTPS; do not route the domain to `api-gw`, `db`, Caddy, or port 80. If EasyPanel requires an initial deploy before the service can be selected, perform it and continue with the required redeploy in step 6.
-5. Only after the primary domain exists, set `APP_ORIGIN=https://$(PRIMARY_DOMAIN)` and `APP_DOMAIN=$(PRIMARY_DOMAIN)`. Keep `NEXT_PUBLIC_STELLAR_NETWORK=testnet` and configure the bootstrapped public issuer/distributor values.
+5. Only after the primary domain exists, set `APP_ORIGIN=https://$(PRIMARY_DOMAIN)` and `APP_DOMAIN=$(PRIMARY_DOMAIN)`. Keep `NEXT_PUBLIC_STELLAR_NETWORK=testnet`, set the bootstrapped issuer, and set server-only `STELLAR_PAYMENT_RECEIVER` to the public key derived from `STELLAR_DISTRIBUTION_SECRET`.
 6. Run `infra/preflight.sh /absolute/path/to/combined.env easypanel`, then deploy or redeploy. The redeploy after assigning the primary domain is mandatory so the application receives the resolved HTTPS origin.
 7. Confirm that EasyPanel created the Compose named volumes `postgres-data`, `storage-data` and `postgres-backups`. Configure EasyPanel/VPS snapshots or an encrypted offsite export for `postgres-backups`; a volume on the same VPS is not an independent disaster-recovery copy.
 
@@ -22,9 +22,9 @@ The generic VPS files still include Caddy, but EasyPanel must use its own proxy.
 
 Os arquivos de VPS genérica continuam incluindo Caddy, mas o EasyPanel deve usar seu próprio proxy. O Compose raiz para EasyPanel não contém Caddy, nomes fixos de contêiner nem portas publicadas no host.
 
-All seventeen project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; back up first and apply only reviewed new SQL migrations during a controlled maintenance window.
+All eighteen project migrations are mounted by the StellarInvoice overlay and run when Postgres initializes a **new** data volume. Existing volumes are intentionally not mutated at container start; back up first and apply only reviewed new SQL migrations during a controlled maintenance window.
 
-As dezessete migrations do projeto são montadas pela sobreposição do StellarInvoice e executam quando o Postgres inicializa um volume de dados **novo**. Volumes existentes não são alterados automaticamente na inicialização; aplique migrações SQL revisadas explicitamente em uma janela de manutenção controlada.
+As dezoito migrations do projeto são montadas pela sobreposição do StellarInvoice e executam quando o Postgres inicializa um volume de dados **novo**. Volumes existentes não são alterados automaticamente na inicialização; aplique migrações SQL revisadas explicitamente em uma janela de manutenção controlada.
 
 Do not use the defaults in `.env.example` to start a public instance. The EasyPanel configuration is intentionally performed by the user; this repository does not contain live credentials.
 

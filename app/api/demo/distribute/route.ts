@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         }
         await completeDemoDistribution(customerPublicKey, transactionHash);
       }
-      const invoice = await ensureDemoInvoice(customerPublicKey, demo.issuerPublicKey);
+      const invoice = await ensureDemoInvoice(customerPublicKey, demo.issuerPublicKey, demo.receiverPublicKey);
       return NextResponse.json({ amount: DEMO_ASSET_AMOUNT, invoiceId: invoice.id, transactionHash });
     } finally {
       await releaseDemoDistributionLock(attemptKey);

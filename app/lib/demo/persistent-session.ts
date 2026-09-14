@@ -87,13 +87,14 @@ export async function completeDemoDistribution(customerPublicKey: string, transa
   return mapDistribution(data as DistributionRow);
 }
 
-export async function ensureDemoInvoice(customerPublicKey: string, issuerPublicKey: string) {
+export async function ensureDemoInvoice(customerPublicKey: string, issuerPublicKey: string, receiverPublicKey: string) {
   const { data, error } = await database().rpc("ensure_demo_invoice", {
     demo_amount: "5.0000000",
     demo_customer_public_key: customerPublicKey,
     demo_due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     demo_issuer_public_key: issuerPublicKey,
     demo_memo: randomUUID().replaceAll("-", "").slice(0, 28),
+    demo_receiver_public_key: receiverPublicKey,
   });
   if (error?.message.includes("Demo distribution is not confirmed")) {
     throw new DemoNotProvisionedError("Esta carteira demo ainda não recebeu BRLT fictício.");

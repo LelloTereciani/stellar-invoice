@@ -31,6 +31,7 @@ sed \
   printf '%s\n' 'APP_ORIGIN=https://$(PRIMARY_DOMAIN)'
   printf '%s\n' 'SESSION_SECRET=integration-session-secret-at-least-32-characters'
   printf '%s\n' 'NEXT_PUBLIC_STELLAR_ISSUER=GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF'
+  printf '%s\n' 'STELLAR_PAYMENT_RECEIVER=GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD'
   printf '%s\n' 'ANON_KEY=eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.c2lnbmF0dXJl'
   printf '%s\n' 'SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.c2lnbmF0dXJl'
   printf '%s\n' 'SECRET_KEY_BASE=integration-secret-key-base-that-is-not-the-documented-default-value'
@@ -46,6 +47,13 @@ malformed_environment="$test_root/malformed.env"
 sed 's/^SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiJ9.*/SERVICE_ROLE_KEY=not-a-jwt/' "$environment_file" > "$malformed_environment"
 if "$project_root/infra/preflight.sh" "$malformed_environment" easypanel >/dev/null 2>&1; then
   echo "EasyPanel preflight accepted a malformed service-role JWT" >&2
+  exit 1
+fi
+
+malformed_receiver_environment="$test_root/malformed-receiver.env"
+sed 's/^STELLAR_PAYMENT_RECEIVER=.*/STELLAR_PAYMENT_RECEIVER=not-a-stellar-account/' "$environment_file" > "$malformed_receiver_environment"
+if "$project_root/infra/preflight.sh" "$malformed_receiver_environment" easypanel >/dev/null 2>&1; then
+  echo "EasyPanel preflight accepted a malformed payment receiver" >&2
   exit 1
 fi
 
