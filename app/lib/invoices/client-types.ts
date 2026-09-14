@@ -13,6 +13,7 @@ export type CustomerInvoice = {
   preparedPaymentExpiresAt: string | null;
   preparedPaymentHash: string | null;
   preparedPaymentXdr: string | null;
+  receiverPublicKey: string;
   rejectedAttempts?: Array<{ observedAt: string; reason: string; transactionHash: string }>;
   status: InvoiceStatus;
 };

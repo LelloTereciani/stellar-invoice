@@ -9,6 +9,7 @@ export type PendingInvoice = {
   dueAt?: string;
   issuerPublicKey: string;
   memo: string;
+  receiverPublicKey: string;
 };
 
 const accountLoader = async (address: string) => {

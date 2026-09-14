@@ -68,6 +68,7 @@ describe("disposable browser demo wallet", () => {
       debtorPublicKey: wallet.publicKey(),
       issuerPublicKey: issuer,
       memo: "demo-invoice",
+      receiverPublicKey: issuer,
     };
     const xdr = new TransactionBuilder(new Account(wallet.publicKey(), "10"), {
       fee: "100",

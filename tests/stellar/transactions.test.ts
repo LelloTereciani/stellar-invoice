@@ -27,7 +27,7 @@ describe("Stellar Testnet transaction builders", () => {
     const debtor = Keypair.random().publicKey();
     const issuer = Keypair.random().publicKey();
     fundedAccount(debtor);
-    const invoice = { amount: "10.1234567", assetIssuer: issuer, debtorPublicKey: debtor, issuerPublicKey: issuer, memo: "inv-123" };
+    const invoice = { amount: "10.1234567", assetIssuer: issuer, debtorPublicKey: debtor, issuerPublicKey: issuer, memo: "inv-123", receiverPublicKey: issuer };
 
     const transaction = TransactionBuilder.fromXDR(await buildInvoicePaymentXdr(invoice, debtor), Networks.TESTNET) as Transaction;
     expect(transaction.source).toBe(debtor);
@@ -49,7 +49,7 @@ describe("Stellar Testnet transaction builders", () => {
     const debtor = Keypair.random().publicKey();
     const issuer = Keypair.random().publicKey();
     fundedAccount(debtor);
-    const invoice = { amount: "10.0000000", assetIssuer: issuer, debtorPublicKey: debtor, issuerPublicKey: issuer, memo: "inv-123" };
+    const invoice = { amount: "10.0000000", assetIssuer: issuer, debtorPublicKey: debtor, issuerPublicKey: issuer, memo: "inv-123", receiverPublicKey: issuer };
     const xdr = await buildInvoicePaymentXdr(invoice, debtor);
 
     expect(() => reviewInvoicePaymentXdr(xdr, { ...invoice, amount: "11.0000000" }, debtor)).toThrow("does not match");
@@ -59,7 +59,7 @@ describe("Stellar Testnet transaction builders", () => {
   it("rejects excessive fees, long validity, invalid sequence, and a restricted trustline limit", () => {
     const debtor = Keypair.random().publicKey();
     const issuer = Keypair.random().publicKey();
-    const invoice = { amount: "10.0000000", assetIssuer: issuer, debtorPublicKey: debtor, issuerPublicKey: issuer, memo: "inv-safe" };
+    const invoice = { amount: "10.0000000", assetIssuer: issuer, debtorPublicKey: debtor, issuerPublicKey: issuer, memo: "inv-safe", receiverPublicKey: issuer };
     const excessiveFee = new TransactionBuilder(new Account(debtor, "10"), { fee: "10000", networkPassphrase: Networks.TESTNET })
       .addMemo(Memo.text(invoice.memo))
       .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuer), destination: issuer }))

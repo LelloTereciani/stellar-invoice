@@ -13,6 +13,7 @@ const baseInvoice = {
   id: "invoice-1",
   issuerPublicKey: "GISSUER",
   memo: "inv-123",
+  receiverPublicKey: "GISSUER",
   status: "pending" as const,
 };
 const transaction = { created_at: "2029-01-01T00:00:00.000Z", hash, memo: "inv-123", memo_type: "text" as const, source_account: "GDEBTOR", successful: true };

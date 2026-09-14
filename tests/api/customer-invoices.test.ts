@@ -39,6 +39,7 @@ const invoice = {
   preparedPaymentExpiresAt: null,
   preparedPaymentHash: null,
   preparedPaymentXdr: null,
+  receiverPublicKey: Keypair.random().publicKey(),
   status: "pending" as const,
 };
 

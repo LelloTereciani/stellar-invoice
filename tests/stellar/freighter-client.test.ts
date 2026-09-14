@@ -56,6 +56,7 @@ describe("Freighter Testnet client", () => {
       debtorPublicKey,
       issuerPublicKey,
       memo: "invoice-123",
+      receiverPublicKey: issuerPublicKey,
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ account_id: debtorPublicKey, sequence: "123" }))));
     const xdr = await buildInvoicePaymentXdr(invoice, debtorPublicKey);
