@@ -93,7 +93,7 @@ export async function buildInvoicePaymentXdr(invoice: PendingInvoice, customerPu
     .addMemo(Memo.text(invoice.memo))
     .addOperation(
       Operation.payment({
-        destination: invoice.issuerPublicKey,
+        destination: invoice.receiverPublicKey,
         asset: new Asset("BRLT", invoice.assetIssuer),
         amount: invoice.amount,
       }),
@@ -129,10 +129,9 @@ export function reviewInvoicePaymentXdr(
     transaction.source === customerPublicKey &&
     customerPublicKey === invoice.debtorPublicKey &&
     operationSource === customerPublicKey &&
-    operation.destination === invoice.issuerPublicKey &&
+    operation.destination === invoice.receiverPublicKey &&
     operation.asset.getCode() === "BRLT" &&
     assetIssuer === invoice.assetIssuer &&
-    invoice.assetIssuer === invoice.issuerPublicKey &&
     operation.amount === invoice.amount &&
     memo === invoice.memo;
   if (!matches) throw new Error("Payment XDR does not match the invoice");

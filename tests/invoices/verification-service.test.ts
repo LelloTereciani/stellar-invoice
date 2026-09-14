@@ -1,23 +1,27 @@
+import { Keypair } from "@stellar/stellar-sdk";
 import { describe, expect, it } from "vitest";
 
 import { processInvoiceVerification, type VerificationRepository } from "../../app/lib/invoices/verification-service.js";
 
 const hash = "a".repeat(64);
+const debtor = Keypair.random().publicKey();
+const issuer = Keypair.random().publicKey();
+const receiver = Keypair.random().publicKey();
 const baseInvoice = {
   amount: "10.0000000",
-  assetIssuer: "GISSUER",
+  assetIssuer: issuer,
   confirmedTransactionHash: null,
   createdAt: "2028-01-01T00:00:00.000Z",
-  debtorPublicKey: "GDEBTOR",
+  debtorPublicKey: debtor,
   dueAt: "2030-01-01T00:00:00.000Z",
   id: "invoice-1",
-  issuerPublicKey: "GISSUER",
+  issuerPublicKey: issuer,
   memo: "inv-123",
-  receiverPublicKey: "GISSUER",
+  receiverPublicKey: receiver,
   status: "pending" as const,
 };
-const transaction = { created_at: "2029-01-01T00:00:00.000Z", hash, memo: "inv-123", memo_type: "text" as const, source_account: "GDEBTOR", successful: true };
-const operations = [{ amount: "10.0000000", asset_code: "BRLT", asset_issuer: "GISSUER", source_account: "GDEBTOR", to: "GISSUER", transaction_successful: true, type: "payment" }];
+const transaction = { created_at: "2029-01-01T00:00:00.000Z", hash, memo: "inv-123", memo_type: "text" as const, source_account: debtor, successful: true };
+const operations = [{ amount: "10.0000000", asset_code: "BRLT", asset_issuer: issuer, source_account: debtor, to: receiver, transaction_successful: true, type: "payment" }];
 
 function repository() {
   const calls = { confirmed: 0, expired: 0, rejected: 0 };
@@ -40,6 +44,22 @@ describe("invoice verification lifecycle", () => {
     const repo = repository();
     const result = await processInvoiceVerification(baseInvoice, hash, async () => ({ operations, transaction: { ...transaction, memo: "other" } }), repo.value, new Date("2029-01-01"));
     expect(result).toMatchObject({ status: "rejected" });
+    expect(repo.calls).toEqual({ confirmed: 0, expired: 0, rejected: 1 });
+  });
+
+  it("records a payment sent to an account other than the invoice receiver", async () => {
+    const repo = repository();
+    const wrongDestination = [{ ...operations[0], to: issuer }];
+    const result = await processInvoiceVerification(baseInvoice, hash, async () => ({ operations: wrongDestination, transaction }), repo.value, new Date("2029-01-01"));
+    expect(result).toEqual({ reason: "Unexpected destination", status: "rejected" });
+    expect(repo.calls).toEqual({ confirmed: 0, expired: 0, rejected: 1 });
+  });
+
+  it("records BRLT issued by an account other than the invoice asset issuer", async () => {
+    const repo = repository();
+    const wrongAssetIssuer = [{ ...operations[0], asset_issuer: Keypair.random().publicKey() }];
+    const result = await processInvoiceVerification(baseInvoice, hash, async () => ({ operations: wrongAssetIssuer, transaction }), repo.value, new Date("2029-01-01"));
+    expect(result).toEqual({ reason: "Unexpected asset", status: "rejected" });
     expect(repo.calls).toEqual({ confirmed: 0, expired: 0, rejected: 1 });
   });
 
