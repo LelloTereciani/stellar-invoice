@@ -217,3 +217,68 @@ test("reviews and signs the exact demo invoice in the browser before verificatio
   expect(horizonSubmissions).toBe(1);
   expect(paymentPreparations).toBe(2);
 });
+
+test("retries a transient verification failure without submitting a second payment", async ({ page }) => {
+  const wallet = Keypair.random();
+  const issuer = Keypair.random().publicKey();
+  const receiver = Keypair.random().publicKey();
+  const invoice = {
+    amount: "5.0000000",
+    assetIssuer: issuer,
+    confirmedTransactionHash: null,
+    createdAt: "2029-01-01T00:00:00.000Z",
+    debtorPublicKey: wallet.publicKey(),
+    dueAt: "2030-09-30T23:59:00.000Z",
+    id: "retry-invoice",
+    issuerPublicKey: issuer,
+    memo: "retry-payment",
+    preparedPaymentExpiresAt: null,
+    preparedPaymentHash: null,
+    preparedPaymentXdr: null,
+    rejectedAttempts: [],
+    receiverPublicKey: receiver,
+    status: "pending",
+  };
+  const xdr = new TransactionBuilder(new Account(wallet.publicKey(), "10"), { fee: "100", networkPassphrase: Networks.TESTNET })
+    .addMemo(Memo.text(invoice.memo))
+    .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuer), destination: receiver }))
+    .setTimeout(180)
+    .build()
+    .toXDR();
+  const transactionHash = TransactionBuilder.fromXDR(xdr, Networks.TESTNET).hash().toString("hex");
+  let horizonSubmissions = 0;
+  let paymentPreparations = 0;
+  let verificationAttempts = 0;
+
+  await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), { key: DEMO_STORAGE_KEY, secret: wallet.secret() });
+  await page.route(/\/api\/invoices\/retry-invoice$/, async (route) => route.fulfill({ body: JSON.stringify(invoice), contentType: "application/json" }));
+  await page.route(/\/api\/invoices\/retry-invoice\/payment$/, async (route) => {
+    paymentPreparations += 1;
+    await route.fulfill({ body: JSON.stringify({ preparedTransactionHash: transactionHash, xdr }), contentType: "application/json" });
+  });
+  await page.route(/\/api\/invoices\/retry-invoice\/verify$/, async (route) => {
+    verificationAttempts += 1;
+    await route.fulfill(verificationAttempts === 1
+      ? { body: JSON.stringify({ error: "Temporary verification failure" }), contentType: "application/json", status: 503 }
+      : { body: JSON.stringify({ status: "confirmed" }), contentType: "application/json" });
+  });
+  await page.route("https://horizon-testnet.stellar.org/transactions", async (route) => {
+    horizonSubmissions += 1;
+    const encoded = new URLSearchParams(route.request().postData() ?? "").get("tx");
+    expect(encoded).toBeTruthy();
+    expect(TransactionBuilder.fromXDR(encoded!, Networks.TESTNET).signatures).toHaveLength(1);
+    await route.fulfill({ body: JSON.stringify({ hash: transactionHash }), contentType: "application/json" });
+  });
+
+  await page.goto("/invoices/retry-invoice");
+  const pay = page.getByRole("button", { name: "Revisar e assinar pagamento →" });
+  await pay.click();
+  await expect(page.getByText("Temporary verification failure")).toBeVisible();
+  await expect(pay).toBeEnabled();
+  await pay.click();
+  await expect(page.getByText("Pagamento confirmado no ledger da Stellar.")).toBeVisible();
+  await expect(page.getByText(transactionHash, { exact: true })).toBeVisible();
+  expect(paymentPreparations).toBe(1);
+  expect(horizonSubmissions).toBe(1);
+  expect(verificationAttempts).toBe(2);
+});

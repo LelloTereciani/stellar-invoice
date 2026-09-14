@@ -25,6 +25,17 @@ describe("invoice schema migration", () => {
     );
   });
 
+  it("applies the receiver migration as one atomic transaction", async () => {
+    const migration = await readFile(fileURLToPath(receiverMigrationUrl), "utf8");
+    const statements = migration
+      .split(";")
+      .map((statement) => statement.trim().toLowerCase())
+      .filter(Boolean);
+
+    expect(statements[0]).toBe("begin");
+    expect(statements.at(-1)).toBe("commit");
+  });
+
   it("replaces the demo invoice RPC with a receiver-bound service-role-only signature", async () => {
     const migration = await readFile(fileURLToPath(receiverMigrationUrl), "utf8");
     const normalized = migration.replace(/\s+/g, " ");

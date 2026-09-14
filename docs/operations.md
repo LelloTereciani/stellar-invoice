@@ -55,6 +55,8 @@ After deploying the reviewed Compose so migration `0018` is mounted, open only t
 psql --set ON_ERROR_STOP=1 --username postgres --dbname postgres --file /docker-entrypoint-initdb.d/init-scripts/zzz-stellar-invoice-0018.sql
 ```
 
+Migration `0018` opens and commits its own transaction. Keep `ON_ERROR_STOP=1` as shown: if any statement fails, PostgreSQL aborts the transaction and the file cannot leave the receiver column or RPC replacement partially applied.
+
 Verify the non-null backfill, function replacement and effective RPC privileges:
 
 ```sh

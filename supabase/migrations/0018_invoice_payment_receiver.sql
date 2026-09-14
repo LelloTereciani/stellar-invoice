@@ -1,3 +1,5 @@
+begin;
+
 alter table public.invoices add column receiver_public_key text;
 update public.invoices set receiver_public_key = issuer_public_key where receiver_public_key is null;
 alter table public.invoices alter column receiver_public_key set not null;
@@ -59,3 +61,5 @@ revoke execute on function public.ensure_demo_invoice(text, text, text, numeric,
   from public, anon, authenticated;
 grant execute on function public.ensure_demo_invoice(text, text, text, numeric, text, timestamptz)
   to service_role;
+
+commit;
