@@ -97,10 +97,7 @@ jobs:
         run: psql --file tests/integration/database.sql
       - name: Verify exact decimal through real PostgREST JSON
         run: |
-          psql <<'SQL'
-          insert into public.invoices(debtor_public_key, issuer_public_key, asset_code, asset_issuer, amount, memo, due_at)
-          values ('GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 1234567890123.1234567, 'postgrest-exact', now() + interval '1 day');
-          SQL
+          psql --set ON_ERROR_STOP=1 --file tests/integration/postgrest-exact.sql
           jwt_secret=$(sed -n 's/^JWT_SECRET=//p' infra/supabase/.env.example | head -n 1)
           docker run --detach --name stellar-invoice-postgrest --network host \
             --env PGRST_DB_URI='postgresql://authenticator:postgrest-integration-only@127.0.0.1:5432/stellar_invoice_test' \
