@@ -1,26 +1,58 @@
-# StellarInvoice
+# Stellar Invoice
 
-MVP de faturamento B2B na Stellar Testnet com o ativo fictício `BRLT`.
+**Classification:** Independent Project · Testnet · Production-oriented prototype
 
-## Estado atual
+A full-stack invoice payment prototype built on Stellar Testnet. It explores wallet authentication, invoice creation, XDR review, browser signing, transaction submission, and ledger-backed payment verification using the fictional BRLT test asset.
 
-O fluxo Testnet está implementado de ponta a ponta: autenticação por carteira, painel responsivo, fatura destinada ao devedor, revisão do XDR, assinatura no navegador, submissão e verificação no ledger. O modo demonstração cria uma chave descartável somente no navegador, usa Friendbot, configura a trustline BRLT, distribui ativos fictícios e abre uma fatura pronta para pagamento. Supabase e aplicação são auto-hospedados na mesma pilha Docker; Caddy é usado apenas na variante de VPS genérica, enquanto o EasyPanel fornece o proxy e TLS.
+## Scope
 
-A jornada também foi executada contra a Stellar Testnet real; hashes públicos e o comando reproduzível estão em [docs/testnet-evidence.md](docs/testnet-evidence.md).
+- Stellar Testnet only; no mainnet or commercial usage is claimed.
+- Self-hosted Supabase and application services can run through Docker Compose.
+- Demo flows use disposable Testnet accounts and Friendbot-funded assets.
+- Operational and Testnet evidence is documented in [docs/testnet-evidence.md](docs/testnet-evidence.md).
 
-## Desenvolvimento local
+This repository represents independent study and engineering practice. It is not presented as audited software or as a production service.
 
-1. Use Node.js 22 ou superior.
-2. Copie `.env.example` para `.env.local` e informe somente chaves públicas de Testnet.
-3. Execute `pnpm install`, `pnpm test`, `pnpm typecheck`, `pnpm build` e `pnpm test:e2e`.
-4. Opcionalmente, após `pnpm demo:bootstrap`, execute `pnpm evidence:testnet` para provar a semântica do ledger em uma jornada descartável na rede pública de testes. Esse comando isolado não prova correlação com app, banco, migration ou build implantado; consulte `docs/testnet-evidence.md`.
+## Local development
 
-## Deploy no EasyPanel
+Requirements: Node.js 22+ and pnpm.
 
-Use um serviço **Compose** com o arquivo único `docker-compose.easypanel.yml`. Configure o domínio primário do EasyPanel para o serviço interno `app`, protocolo `HTTP` e porta `3000`; depois defina a origem HTTPS e faça o deploy/redeploy final. Não publique `80`, `443` ou portas do Supabase no Compose. As instruções exatas estão em [infra/supabase/STELLAR_INVOICE.md](infra/supabase/STELLAR_INVOICE.md).
+```bash
+cp .env.example .env.local
+pnpm install
+pnpm test
+pnpm typecheck
+pnpm build
+pnpm test:e2e
+```
 
-Configure os valores dos dois exemplos de ambiente como segredos; execute `pnpm demo:bootstrap` uma vez em Testnet e copie somente chaves públicas e variáveis operacionais necessárias. Preflight, backup, restauração isolada e rollback estão em [docs/operations.md](docs/operations.md).
+For the disposable Testnet demonstration:
+
+```bash
+pnpm demo:bootstrap
+pnpm evidence:testnet
+```
+
+`pnpm evidence:testnet` proves only the ledger semantics of a disposable public Testnet journey. By itself, it does not prove correlation with the deployed application, database, migration `0018`, PostgREST schema cache, or application build. See [docs/testnet-evidence.md](docs/testnet-evidence.md) for the required receiver evidence and its current status.
+
+Never commit real secrets, private keys, wallet seeds, or populated `.env` files. Use the example environment files as templates.
+
+## Deployment notes
+
+The repository includes Docker Compose and EasyPanel/VPS documentation. Read [docs/operations.md](docs/operations.md) and [infra/supabase/STELLAR_INVOICE.md](infra/supabase/STELLAR_INVOICE.md) before attempting a deployment.
+
+For EasyPanel, use the single `docker-compose.easypanel.yml` Compose definition. Route the primary domain to the internal `app` service over HTTP port `3000`; do not publish ports `80`, `443`, or Supabase service ports from the Compose project. Configure environment values as secrets, run `pnpm demo:bootstrap` once on Testnet, and transfer only the required public keys and operational variables. Preflight, backup, isolated restore, migration, redeploy, and rollback procedures are documented in [docs/operations.md](docs/operations.md).
 
 The production image excludes local environment files and `demo-wallet.json`, so Testnet seeds never enter the build context.
 
-Nunca versione seeds, chaves privadas ou arquivos `.env` com valores reais.
+## Technology
+
+TypeScript, Next.js, Stellar SDK, Freighter-compatible wallet flows, Supabase/Postgres, Docker Compose, Vitest, Playwright, and GitHub Actions.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+## Author
+
+Lello Tereciani
