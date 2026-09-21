@@ -88,6 +88,10 @@ export function buildEvidenceSummary(input: EvidenceSummaryInput) {
     network: "Stellar Testnet" as const,
     paymentHash: input.paymentHash,
     receiverPublicKey: input.treasuryPublicKey,
+    scope: {
+      proves: "Stellar ledger payment semantics" as const,
+      doesNotProve: "correlated application, database, migration or deployed-build flow" as const,
+    },
     trustlineHash: input.trustlineHash,
     verified: true,
   };

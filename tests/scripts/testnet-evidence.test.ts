@@ -35,6 +35,10 @@ describe("Testnet receiver evidence", () => {
       network: "Stellar Testnet",
       paymentHash: "b".repeat(64),
       receiverPublicKey: treasuryPublicKey,
+      scope: {
+        proves: "Stellar ledger payment semantics",
+        doesNotProve: "correlated application, database, migration or deployed-build flow",
+      },
       trustlineHash: "c".repeat(64),
       verified: true,
     });

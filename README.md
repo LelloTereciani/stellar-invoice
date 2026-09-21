@@ -13,7 +13,7 @@ A jornada também foi executada contra a Stellar Testnet real; hashes públicos 
 1. Use Node.js 22 ou superior.
 2. Copie `.env.example` para `.env.local` e informe somente chaves públicas de Testnet.
 3. Execute `pnpm install`, `pnpm test`, `pnpm typecheck`, `pnpm build` e `pnpm test:e2e`.
-4. Opcionalmente, após `pnpm demo:bootstrap`, execute `pnpm evidence:testnet` para uma jornada descartável na rede pública de testes.
+4. Opcionalmente, após `pnpm demo:bootstrap`, execute `pnpm evidence:testnet` para provar a semântica do ledger em uma jornada descartável na rede pública de testes. Esse comando isolado não prova correlação com app, banco, migration ou build implantado; consulte `docs/testnet-evidence.md`.
 
 ## Deploy no EasyPanel
 

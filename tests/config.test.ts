@@ -64,6 +64,16 @@ describe("loadStellarConfig", () => {
       receiverPublicKey: "GAHRN27DIWCP7J3OFLE4NY7GF2FJUAWQ2MJJZQYS6JCP2QBPXBW2IB73",
     });
   });
+
+  it("rejects using the asset issuer as the payment receiver", () => {
+    const issuerPublicKey = Keypair.random().publicKey();
+
+    expect(() => loadStellarConfig({
+      NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+      NEXT_PUBLIC_STELLAR_ISSUER: issuerPublicKey,
+      STELLAR_PAYMENT_RECEIVER: issuerPublicKey,
+    })).toThrow("Stellar issuer and payment receiver must be different accounts");
+  });
 });
 
 describe("requireServerEnv", () => {
@@ -118,6 +128,18 @@ describe("loadDemoDistributionConfig", () => {
         STELLAR_PAYMENT_RECEIVER: Keypair.random().publicKey(),
       }),
     ).toThrow("Demo payment receiver must match the distribution account");
+  });
+
+  it("rejects using the issuer as the demo distributor and receiver", () => {
+    const issuerAndDistributor = Keypair.random();
+
+    expect(() => loadDemoDistributionConfig({
+      DEMO_MODE: "enabled",
+      NEXT_PUBLIC_STELLAR_ISSUER: issuerAndDistributor.publicKey(),
+      NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
+      STELLAR_DISTRIBUTION_SECRET: issuerAndDistributor.secret(),
+      STELLAR_PAYMENT_RECEIVER: issuerAndDistributor.publicKey(),
+    })).toThrow("Demo issuer and distribution account must be different accounts");
   });
 
   it("returns the matching receiver derived from the demo distribution account", () => {

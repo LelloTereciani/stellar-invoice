@@ -11,6 +11,9 @@ export function createInvoiceDraft(input: InvoiceInput, issuerPublicKey: string,
   assertPublicKey(input.debtorPublicKey, "Debtor");
   assertPublicKey(issuerPublicKey, "Issuer");
   assertPublicKey(receiverPublicKey, "Receiver");
+  if (new Set([input.debtorPublicKey, issuerPublicKey, receiverPublicKey]).size !== 3) {
+    throw new Error("Debtor, issuer and receiver must be different accounts");
+  }
   if (!/^(?:0|[1-9]\d*)(?:\.\d{1,7})?$/.test(input.amount) || /^0(?:\.0+)?$/.test(input.amount)) throw new Error("Amount must be positive with at most seven decimals");
   const dueAt = new Date(input.dueAt);
   if (Number.isNaN(dueAt.valueOf()) || dueAt <= now) throw new Error("Due date must be in the future");

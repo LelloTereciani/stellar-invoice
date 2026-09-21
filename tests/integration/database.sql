@@ -206,6 +206,43 @@ begin
 end;
 $$;
 do $$
+declare debtor_issuer_rejected boolean := false;
+declare debtor_receiver_rejected boolean := false;
+declare issuer_receiver_rejected boolean := false;
+begin
+  begin
+    perform public.ensure_demo_invoice(
+      'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      5.0000000, 'equal-issuer-receiver', now() + interval '1 day'
+    );
+  exception when raise_exception then issuer_receiver_rejected := true;
+  end;
+  begin
+    perform public.ensure_demo_invoice(
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD',
+      5.0000000, 'equal-debtor-issuer', now() + interval '1 day'
+    );
+  exception when raise_exception then debtor_issuer_rejected := true;
+  end;
+  begin
+    perform public.ensure_demo_invoice(
+      'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD',
+      5.0000000, 'equal-debtor-receiver', now() + interval '1 day'
+    );
+  exception when raise_exception then debtor_receiver_rejected := true;
+  end;
+  perform public.test_assert(issuer_receiver_rejected, 'demo invoice rejects equal issuer and receiver accounts');
+  perform public.test_assert(debtor_issuer_rejected, 'demo invoice rejects equal debtor and issuer accounts');
+  perform public.test_assert(debtor_receiver_rejected, 'demo invoice rejects equal debtor and receiver accounts');
+end;
+$$;
+do $$
 declare confirmed_session_rejected boolean := false;
 begin
   begin

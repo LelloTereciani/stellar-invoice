@@ -8,6 +8,10 @@ A nova evidência pública da Testnet para o recebedor separado está deliberada
 
 The evidence command reads the ignored issuer/distributor wallet file, derives the treasury receiver from the distributor, creates a new customer only in memory, and prints only public account keys, public transaction hashes and the measured balance transitions. It never prints or persists the customer seed.
 
+`pnpm evidence:testnet` proves only the ledger semantics of this standalone Stellar Testnet journey. It does not prove that a deployed application build, migration `0018`, the PostgREST schema cache and the application database are correlated with those hashes. Release evidence requires a fresh browser/API/database/Horizon run after deployment.
+
+`pnpm evidence:testnet` prova somente a semântica no ledger desta jornada independente na Stellar Testnet. Ele não prova que um build implantado do aplicativo, a migration `0018`, o cache de schema do PostgREST e o banco da aplicação estejam correlacionados com esses hashes. A evidência de release exige uma nova execução navegador/API/banco/Horizon após o deploy.
+
 ## Legacy evidence — 2026-09-01 (issuer destination)
 
 The evidence below predates receiver separation and is retained only as historical proof of the former issuer-destination flow. It must not be cited as proof of migration `0018` or of treasury receipt.

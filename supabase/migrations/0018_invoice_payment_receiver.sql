@@ -30,6 +30,9 @@ begin
     or demo_customer_public_key !~ '^G[A-Z2-7]{55}$'
     or demo_issuer_public_key !~ '^G[A-Z2-7]{55}$'
     or demo_receiver_public_key !~ '^G[A-Z2-7]{55}$'
+    or demo_customer_public_key = demo_issuer_public_key
+    or demo_customer_public_key = demo_receiver_public_key
+    or demo_issuer_public_key = demo_receiver_public_key
     or char_length(demo_memo) not between 1 and 28 then
     raise exception 'Invalid demo invoice';
   end if;
@@ -61,5 +64,7 @@ revoke execute on function public.ensure_demo_invoice(text, text, text, numeric,
   from public, anon, authenticated;
 grant execute on function public.ensure_demo_invoice(text, text, text, numeric, text, timestamptz)
   to service_role;
+
+notify pgrst, 'reload schema';
 
 commit;

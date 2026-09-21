@@ -26,4 +26,17 @@ describe("invoice validation", () => {
       new Date("2029-01-01T00:00:00.000Z"),
     )).toThrow("Receiver must be a valid Stellar public key");
   });
+
+  it.each([
+    { debtorPublicKey: issuer, issuerPublicKey: issuer, receiverPublicKey: receiver, rolePair: "debtor and issuer" },
+    { debtorPublicKey: receiver, issuerPublicKey: issuer, receiverPublicKey: receiver, rolePair: "debtor and receiver" },
+    { debtorPublicKey: debtor, issuerPublicKey: issuer, receiverPublicKey: issuer, rolePair: "issuer and receiver" },
+  ])("rejects equal $rolePair accounts", ({ debtorPublicKey, issuerPublicKey, receiverPublicKey }) => {
+    expect(() => createInvoiceDraft(
+      { debtorPublicKey, amount: "1", dueAt: "2030-01-01T00:00:00.000Z" },
+      issuerPublicKey,
+      receiverPublicKey,
+      new Date("2029-01-01T00:00:00.000Z"),
+    )).toThrow("Debtor, issuer and receiver must be different accounts");
+  });
 });

@@ -65,6 +65,10 @@ export function loadDemoDistributionConfig(environment: ServerEnvironment & Demo
     throw new Error("Demo distribution configuration contains an invalid Stellar key");
   }
 
+  if (issuerPublicKey === distributionPublicKey) {
+    throw new Error("Demo issuer and distribution account must be different accounts");
+  }
+
   const receiverPublicKey = requireServerEnv("STELLAR_PAYMENT_RECEIVER", environment);
   if (receiverPublicKey !== distributionPublicKey) {
     throw new Error("Demo payment receiver must match the distribution account");
@@ -98,6 +102,10 @@ export function loadStellarConfig(environment: StellarEnvironment): StellarConfi
     Keypair.fromPublicKey(receiverPublicKey);
   } catch {
     throw new Error("STELLAR_PAYMENT_RECEIVER must be a valid Stellar public key");
+  }
+
+  if (issuerPublicKey === receiverPublicKey) {
+    throw new Error("Stellar issuer and payment receiver must be different accounts");
   }
 
   return {
