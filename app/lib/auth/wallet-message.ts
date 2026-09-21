@@ -15,6 +15,28 @@ function normalizedOrigin(origin: string): string {
   return new URL(origin).origin;
 }
 
+export function verifyWalletChallengeSignature(
+  publicKey: string,
+  message: string,
+  signatureBase64: string,
+): boolean {
+  try {
+    if (!/^[A-Za-z0-9+/]{86}==$/.test(signatureBase64)) return false;
+
+    const signature = Buffer.from(signatureBase64, "base64");
+    if (signature.length !== 64 || signature.toString("base64") !== signatureBase64) {
+      return false;
+    }
+
+    return Keypair.fromPublicKey(publicKey).verifyMessage(
+      message,
+      signature,
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function buildWalletChallengeMessage(input: {
   expiresAt: string;
   nonce: string;
@@ -50,12 +72,9 @@ export function verifyWalletChallengeMessage(
     /^nonce:[a-f0-9]{64}$/.test(lines[7] ?? "");
   if (!structurallyValid) return false;
 
-  try {
-    return Keypair.fromPublicKey(context.walletPublicKey).verify(
-      Buffer.from(challenge.message),
-      Buffer.from(challenge.signature, "base64"),
-    );
-  } catch {
-    return false;
-  }
+  return verifyWalletChallengeSignature(
+    context.walletPublicKey,
+    challenge.message,
+    challenge.signature,
+  );
 }

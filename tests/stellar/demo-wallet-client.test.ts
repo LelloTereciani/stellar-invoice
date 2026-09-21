@@ -33,7 +33,7 @@ describe("disposable browser demo wallet", () => {
       .mockImplementationOnce(async (_url: string, init: RequestInit) => {
         const body = JSON.parse(String(init.body)) as { message: string; signature: string; walletPublicKey: string };
         expect(body.walletPublicKey).toBe(wallet.publicKey());
-        expect(Keypair.fromPublicKey(wallet.publicKey()).verify(Buffer.from(body.message), Buffer.from(body.signature, "base64"))).toBe(true);
+        expect(Keypair.fromPublicKey(wallet.publicKey()).verifyMessage(body.message, Buffer.from(body.signature, "base64"))).toBe(true);
         expect(JSON.stringify(body)).not.toContain(wallet.secret());
         return new Response(JSON.stringify({ authenticated: true }));
       });

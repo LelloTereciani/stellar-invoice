@@ -1,7 +1,6 @@
 "use client";
 
 import { Horizon, Keypair, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
-import { Buffer } from "buffer";
 
 import { STELLAR_TESTNET } from "./network.js";
 import { reviewInvoicePaymentXdr, type PendingInvoice } from "./transactions.js";
@@ -50,7 +49,7 @@ export async function authenticateDemoWallet(wallet: Keypair, fetcher: Fetcher =
       expiresAt: challenge.expiresAt,
       id: challenge.id,
       message: challenge.message,
-      signature: wallet.sign(Buffer.from(challenge.message)).toString("base64"),
+      signature: wallet.signMessage(challenge.message).toString("base64"),
       walletPublicKey,
     }),
     headers: { "content-type": "application/json" },

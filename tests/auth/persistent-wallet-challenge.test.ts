@@ -30,7 +30,7 @@ describe("persistent wallet challenge", () => {
       store,
       new Date("2026-08-31T18:00:00.000Z"),
     );
-    const signature = wallet.sign(Buffer.from(challenge.message)).toString("base64");
+    const signature = wallet.signMessage(challenge.message).toString("base64");
 
     await expect(verifyAndConsumeWalletChallenge({ ...challenge, signature }, {
       origin: "https://invoice.example.com",
@@ -47,12 +47,30 @@ describe("persistent wallet challenge", () => {
     const attacker = Keypair.random();
     const store = new MemoryStore();
     const challenge = await issuePersistentWalletChallenge(wallet.publicKey(), "https://invoice.example.com", store);
-    const signature = attacker.sign(Buffer.from(challenge.message)).toString("base64");
+    const signature = attacker.signMessage(challenge.message).toString("base64");
 
     await expect(verifyAndConsumeWalletChallenge({ ...challenge, signature }, {
       origin: "https://invoice.example.com",
       walletPublicKey: wallet.publicKey(),
     }, store)).rejects.toThrow("signature is invalid");
+    expect(store.records.get(challenge.id)?.consumedAt).toBeUndefined();
+  });
+
+  it("rejects a correctly signed challenge after expiry without consuming it", async () => {
+    const wallet = Keypair.random();
+    const store = new MemoryStore();
+    const challenge = await issuePersistentWalletChallenge(
+      wallet.publicKey(),
+      "https://invoice.example.com",
+      store,
+      new Date("2026-08-31T18:00:00.000Z"),
+    );
+    const signature = wallet.signMessage(challenge.message).toString("base64");
+
+    await expect(verifyAndConsumeWalletChallenge({ ...challenge, signature }, {
+      origin: "https://invoice.example.com",
+      walletPublicKey: wallet.publicKey(),
+    }, store, new Date("2026-08-31T18:05:00.001Z"))).rejects.toThrow("invalid or expired");
     expect(store.records.get(challenge.id)?.consumedAt).toBeUndefined();
   });
 });

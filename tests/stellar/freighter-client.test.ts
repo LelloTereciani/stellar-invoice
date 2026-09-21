@@ -31,15 +31,29 @@ describe("Freighter Testnet client", () => {
   });
 
   it("signs the one-time server challenge and establishes the browser session", async () => {
-    const walletPublicKey = Keypair.random().publicKey();
+    const wallet = Keypair.random();
+    const walletPublicKey = wallet.publicKey();
+    const challengeMessage = "challenge";
+    const signatureBytes = wallet.signMessage(challengeMessage);
+    const expectedSignature = signatureBytes.toString("base64");
     const walletAdapter = adapter(walletPublicKey);
+    walletAdapter.signMessage = vi.fn().mockResolvedValue({
+      signedMessage: Uint8Array.from(signatureBytes),
+      signerAddress: walletPublicKey,
+    });
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ expiresAt: "2030-01-01T00:05:00.000Z", id: "challenge-id", message: "challenge" })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ authenticated: true, walletPublicKey })));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ expiresAt: "2030-01-01T00:05:00.000Z", id: "challenge-id", message: challengeMessage })))
+      .mockImplementationOnce(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body)) as { signature: string };
+        expect(input).toBe("/api/auth/verify");
+        expect(signatureBytes).toHaveLength(64);
+        expect(body.signature).toBe(expectedSignature);
+        return new Response(JSON.stringify({ authenticated: true, walletPublicKey }));
+      });
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(authenticateFreighterWallet(walletAdapter)).resolves.toBe(walletPublicKey);
-    expect(walletAdapter.signMessage).toHaveBeenCalledWith("challenge", {
+    expect(walletAdapter.signMessage).toHaveBeenCalledWith(challengeMessage, {
       address: walletPublicKey,
       networkPassphrase: Networks.TESTNET,
     });
