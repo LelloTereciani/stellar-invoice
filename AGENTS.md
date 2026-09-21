@@ -9,9 +9,11 @@
 
 ## Pending implementation reminder
 
-- At the start of the next work session in this repository, tell the user that payment-receiver separation is planned but not implemented, and point to `docs/superpowers/plans/2026-09-13-separate-payment-receiver.md`.
-- Briefly explain that the current payment flow sends BRLT back to the asset issuer, which redeems the asset; the pending plan routes future invoice payments to a separate treasury/receiver so the debtor balance decreases and the receiver balance increases.
-- Ask whether to execute that plan before beginning unrelated implementation work. Remove this reminder only after the plan is fully implemented and verified on Stellar Testnet.
+- At the start of the next work session in this repository, point to `docs/superpowers/specs/2026-09-21-wallet-session-and-receiver-ux-design.md` and continue from its approved design. The user explicitly deferred correction and implementation to that session.
+- Start by reproducing and diagnosing the live `Wallet challenge signature is invalid` failure. The observed state was a demo wallet active in StellarInvoice while Freighter account `GDAD6...ZJRF` was detected but not authenticated or active.
+- Implement an atomic demo-to-Freighter session switch, real demo logout after successful replacement, persistent Portuguese frontend status, wallet balances/trustline, separate **A pagar** and **A receber** views, and a receiver snapshot signed per real invoice.
+- Preserve a dormant demo key only for explicit recovery; never auto-reactivate it after logout. Keep the demo's configured receiver bound to its distribution account and never place a personal Freighter secret on the server.
+- Remove this reminder only after the implementation, independent review, visible browser verification, and fresh correlated Stellar Testnet evidence are complete. Deployment and active-database changes remain separately controlled.
 
 ## Deployment boundary
 
