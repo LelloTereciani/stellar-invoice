@@ -130,6 +130,7 @@ jobs:
               legacy_receiver=$(jq -r '.[0].receiver_public_key // empty' <<<"$upgraded_response")
               test -n "$legacy_issuer"
               test "$legacy_receiver" = "$legacy_issuer"
+              psql --set ON_ERROR_STOP=1 --command "delete from public.invoices where memo = 'legacy-before-0018';"
               cleanup_upgrade_postgrest
             fi
           done
