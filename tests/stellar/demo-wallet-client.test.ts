@@ -62,19 +62,21 @@ describe("disposable browser demo wallet", () => {
   it("reviews, locally signs, and submits only the exact invoice payment", async () => {
     const wallet = Keypair.random();
     const issuer = Keypair.random().publicKey();
+    const receiver = Keypair.random().publicKey();
     const invoice = {
       amount: "25.0000000",
       assetIssuer: issuer,
       debtorPublicKey: wallet.publicKey(),
       issuerPublicKey: issuer,
       memo: "demo-invoice",
+      receiverPublicKey: receiver,
     };
     const xdr = new TransactionBuilder(new Account(wallet.publicKey(), "10"), {
       fee: "100",
       networkPassphrase: Networks.TESTNET,
     })
       .addMemo(Memo.text(invoice.memo))
-      .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuer), destination: issuer }))
+      .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuer), destination: receiver }))
       .setTimeout(180)
       .build()
       .toXDR();

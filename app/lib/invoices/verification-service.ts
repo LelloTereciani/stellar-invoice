@@ -8,6 +8,7 @@ export type VerificationInvoice = {
   id: string;
   issuerPublicKey: string;
   memo: string;
+  receiverPublicKey: string;
   status: "pending" | "confirmed" | "expired";
 };
 

@@ -90,17 +90,54 @@ jobs:
         run: psql --file tests/integration/postgres-bootstrap.sql
       - name: Apply migrations
         run: |
+          jwt_secret=$(sed -n 's/^JWT_SECRET=//p' infra/supabase/.env.example | head -n 1)
+          cleanup_upgrade_postgrest() {
+            docker rm --force stellar-invoice-postgrest-upgrade >/dev/null 2>&1 || true
+          }
+          trap cleanup_upgrade_postgrest EXIT
           for migration in supabase/migrations/*.sql; do
-            psql --file "$migration"
+            migration_name=$(basename "$migration")
+            if [ "$migration_name" = 0018_invoice_payment_receiver.sql ]; then
+              psql --set ON_ERROR_STOP=1 --file tests/integration/legacy-invoice-before-0018.sql
+              docker run --detach --name stellar-invoice-postgrest-upgrade --network host \
+                --env PGRST_DB_URI='postgresql://authenticator:postgrest-integration-only@127.0.0.1:5432/stellar_invoice_test' \
+                --env PGRST_DB_SCHEMAS=public --env PGRST_DB_ANON_ROLE=anon --env PGRST_JWT_SECRET="$jwt_secret" \
+                postgrest/postgrest:v14.12
+              postgrest_ready=false
+              for attempt in {1..30}; do
+                if curl --fail --silent http://127.0.0.1:3000/ >/dev/null; then postgrest_ready=true; break; fi
+                sleep 1
+              done
+              test "$postgrest_ready" = true
+              token=$(POSTGREST_TEST_JWT_SECRET="$jwt_secret" node tests/integration/postgrest-token.mjs)
+              warm_response=$(curl --fail --silent --header "Authorization: Bearer $token" \
+                'http://127.0.0.1:3000/invoices?select=id&memo=eq.legacy-before-0018')
+              test "$(jq 'length' <<<"$warm_response")" = 1
+            fi
+
+            psql --set ON_ERROR_STOP=1 --file "$migration"
+
+            if [ "$migration_name" = 0018_invoice_payment_receiver.sql ]; then
+              upgraded_response=''
+              for attempt in {1..30}; do
+                if upgraded_response=$(curl --fail --silent --header "Authorization: Bearer $token" \
+                  'http://127.0.0.1:3000/invoices?select=issuer_public_key,receiver_public_key&memo=eq.legacy-before-0018'); then
+                  break
+                fi
+                sleep 1
+              done
+              legacy_issuer=$(jq -r '.[0].issuer_public_key // empty' <<<"$upgraded_response")
+              legacy_receiver=$(jq -r '.[0].receiver_public_key // empty' <<<"$upgraded_response")
+              test -n "$legacy_issuer"
+              test "$legacy_receiver" = "$legacy_issuer"
+              cleanup_upgrade_postgrest
+            fi
           done
       - name: Verify privileges, RLS, and lifecycle
         run: psql --file tests/integration/database.sql
       - name: Verify exact decimal through real PostgREST JSON
         run: |
-          psql <<'SQL'
-          insert into public.invoices(debtor_public_key, issuer_public_key, asset_code, asset_issuer, amount, memo, due_at)
-          values ('GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 1234567890123.1234567, 'postgrest-exact', now() + interval '1 day');
-          SQL
+          psql --set ON_ERROR_STOP=1 --file tests/integration/postgrest-exact.sql
           jwt_secret=$(sed -n 's/^JWT_SECRET=//p' infra/supabase/.env.example | head -n 1)
           docker run --detach --name stellar-invoice-postgrest --network host \
             --env PGRST_DB_URI='postgresql://authenticator:postgrest-integration-only@127.0.0.1:5432/stellar_invoice_test' \

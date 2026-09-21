@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireServerEnv } from "../config.js";
 import { createInvoiceDraft, type InvoiceInput } from "./validation.js";
 
-type InvoiceRow = { id: string; amount_text: string; asset_issuer: string; confirmed_transaction_hash?: string | null; created_at: string; debtor_public_key: string; due_at: string; issuer_public_key: string; memo: string; prepared_payment_expires_at?: string | null; prepared_payment_hash?: string | null; prepared_payment_xdr?: string | null; status: "pending" | "confirmed" | "expired" };
+type InvoiceRow = { id: string; amount_text: string; asset_issuer: string; confirmed_transaction_hash?: string | null; created_at: string; debtor_public_key: string; due_at: string; issuer_public_key: string; memo: string; prepared_payment_expires_at?: string | null; prepared_payment_hash?: string | null; prepared_payment_xdr?: string | null; receiver_public_key: string; status: "pending" | "confirmed" | "expired" };
 type RejectedAttemptRow = { observed_at: string; reason: string; transaction_hash: string };
 
 export function mapInvoiceRow(row: InvoiceRow) {
@@ -23,12 +23,13 @@ export function mapInvoiceRow(row: InvoiceRow) {
     preparedPaymentExpiresAt: row.prepared_payment_expires_at ?? null,
     preparedPaymentHash: row.prepared_payment_hash ?? null,
     preparedPaymentXdr: row.prepared_payment_xdr ?? null,
+    receiverPublicKey: row.receiver_public_key,
     status: row.status,
   };
 }
 
-export async function persistInvoice(input: InvoiceInput, issuerPublicKey: string) {
-  const draft = createInvoiceDraft(input, issuerPublicKey);
+export async function persistInvoice(input: InvoiceInput, issuerPublicKey: string, receiverPublicKey: string) {
+  const draft = createInvoiceDraft(input, issuerPublicKey, receiverPublicKey);
   const database = createClient(
     requireServerEnv("SUPABASE_URL", process.env),
     requireServerEnv("SUPABASE_SERVICE_ROLE_KEY", process.env),
@@ -44,8 +45,9 @@ export async function persistInvoice(input: InvoiceInput, issuerPublicKey: strin
       due_at: draft.dueAt,
       issuer_public_key: draft.issuerPublicKey,
       memo: draft.memo,
+      receiver_public_key: draft.receiverPublicKey,
     })
-    .select("id,memo,status")
+    .select("id,memo,receiver_public_key,status")
     .single();
   if (error) throw new Error("Could not persist invoice");
   return data;

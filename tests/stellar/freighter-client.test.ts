@@ -1,4 +1,4 @@
-import { Keypair, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Account, Asset, Keypair, Memo, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +8,6 @@ import {
   createTrustlineWithFreighter,
   type FreighterAdapter,
 } from "../../app/lib/stellar/freighter-client.js";
-import { buildInvoicePaymentXdr } from "../../app/lib/stellar/transactions.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -50,15 +49,21 @@ describe("Freighter Testnet client", () => {
   it("reviews, signs, and submits the exact invoice XDR in the customer wallet", async () => {
     const debtorPublicKey = Keypair.random().publicKey();
     const issuerPublicKey = Keypair.random().publicKey();
+    const receiverPublicKey = Keypair.random().publicKey();
     const invoice = {
       amount: "10.0000000",
       assetIssuer: issuerPublicKey,
       debtorPublicKey,
       issuerPublicKey,
       memo: "invoice-123",
+      receiverPublicKey,
     };
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ account_id: debtorPublicKey, sequence: "123" }))));
-    const xdr = await buildInvoicePaymentXdr(invoice, debtorPublicKey);
+    const xdr = new TransactionBuilder(new Account(debtorPublicKey, "123"), { fee: "100", networkPassphrase: Networks.TESTNET })
+      .addMemo(Memo.text(invoice.memo))
+      .addOperation(Operation.payment({ amount: invoice.amount, asset: new Asset("BRLT", issuerPublicKey), destination: receiverPublicKey }))
+      .setTimeout(180)
+      .build()
+      .toXDR();
     const expectedHash = TransactionBuilder.fromXDR(xdr, Networks.TESTNET).hash().toString("hex");
     const submit = vi.fn().mockResolvedValue({ hash: expectedHash });
 

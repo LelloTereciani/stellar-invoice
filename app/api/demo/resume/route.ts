@@ -2,7 +2,7 @@ import { NextResponse } from "next/server.js";
 
 import { assertTrustedOrigin } from "../../../lib/auth/request-origin.js";
 import { requireWalletSession } from "../../../lib/auth/request-session.js";
-import { loadStellarConfig, requireServerEnv } from "../../../lib/config.js";
+import { loadDemoDistributionConfig, requireServerEnv } from "../../../lib/config.js";
 import { ensureDemoInvoice } from "../../../lib/demo/persistent-session.js";
 
 export const runtime = "nodejs";
@@ -29,8 +29,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const stellar = loadStellarConfig(process.env);
-    const invoice = await ensureDemoInvoice(session.walletPublicKey, stellar.issuerPublicKey);
+    const demo = loadDemoDistributionConfig(process.env);
+    const invoice = await ensureDemoInvoice(session.walletPublicKey, demo.issuerPublicKey, demo.receiverPublicKey);
     return NextResponse.json({ invoiceId: invoice.id });
   } catch (error: unknown) {
     const code = error instanceof Error && "code" in error && typeof error.code === "string"

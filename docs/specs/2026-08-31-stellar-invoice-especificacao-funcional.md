@@ -22,7 +22,10 @@ Uma carteira não recebe privilégios de emissor somente por informar um endere�
 
 - A rede é exclusivamente Stellar Testnet.
 - A moeda faturada é o ativo clássico fictício `BRLT`, identificado sempre por `BRLT` e pela chave pública do emissor.
-- O emissor possui uma conta emissora e uma conta distribuidora de BRLT, ambas configuradas pela rotina administrativa.
+- A conta emissora cria e identifica o ativo BRLT; ela não é o destino normal dos pagamentos de faturas.
+- A conta distribuidora atua como tesouraria: distribui BRLT de teste aos clientes e recebe os pagamentos das faturas.
+- As identidades públicas do emissor, distribuidor e recebedor são chaves públicas Stellar válidas. Na demonstração, a conta recebedora é a própria tesouraria/distribuidora, cuja chave secreta permanece restrita ao servidor.
+- Enviar BRLT à conta emissora representa resgate/queima do ativo e não o fluxo normal de pagamento de uma fatura.
 - O modo demonstração cria e financia automaticamente uma carteira cliente de Testnet, usando Friendbot somente para XLM e a conta distribuidora somente para BRLT de teste.
 
 ## 4. Fatura
@@ -31,7 +34,7 @@ Cada fatura possui:
 
 - Identificador interno;
 - Carteira pública do cliente devedor;
-- Carteira pública do emissor recebedor;
+- Carteira pública da tesouraria recebedora (`receiver_public_key`);
 - Ativo `BRLT` e respectivo emissor;
 - Valor positivo, com até sete casas decimais;
 - Memo textual único, gerado pelo sistema;
@@ -39,7 +42,7 @@ Cada fatura possui:
 - Estado;
 - Hash e instante de confirmação, quando aplicável.
 
-O emissor informa somente cliente, valor e vencimento. O sistema define emissor, ativo, memo, identificador e estado inicial. O emissor não pode editar uma fatura depois de criada; para corrigir dados, cria uma nova fatura.
+O emissor informa somente cliente, valor e vencimento. O sistema define emissor do ativo, conta recebedora, ativo, memo, identificador e estado inicial. O emissor não pode editar uma fatura depois de criada; para corrigir dados, cria uma nova fatura.
 
 ## 5. Estados e regras de transição
 
@@ -49,7 +52,7 @@ O emissor informa somente cliente, valor e vencimento. O sistema define emissor,
 | `confirmed` | Um pagamento válido e único foi encontrado no ledger. | Nenhuma. |
 | `expired` | O vencimento passou sem pagamento válido confirmado. | Nenhuma. |
 
-Uma fatura só se torna `confirmed` quando uma operação de pagamento concluída na Testnet atende simultaneamente a todos os critérios: destino igual ao emissor, ativo BRLT com o emissor correto, valor exatamente igual ao da fatura e memo exatamente igual ao memo da fatura. Um mesmo hash de transação não pode confirmar mais de uma fatura.
+Uma fatura só se torna `confirmed` quando uma operação de pagamento concluída na Testnet atende simultaneamente a todos os critérios: destino igual à `receiver_public_key` da fatura, ativo BRLT com o emissor correto, valor exatamente igual ao da fatura e memo exatamente igual ao memo da fatura. Um mesmo hash de transação não pode confirmar mais de uma fatura.
 
 Se não houver pagamento válido ao vencer, a fatura torna-se `expired`. Se o sistema encontrar uma tentativa com memo correspondente, mas ativo, destino ou valor divergente, registra-a como tentativa rejeitada com hash e motivo, sem alterar a fatura de `pending`; essa tentativa não é contabilizada como pagamento e o cliente ainda pode pagar corretamente até o vencimento.
 
@@ -57,13 +60,13 @@ Se não houver pagamento válido ao vencer, a fatura torna-se `expired`. Se o si
 
 ### 6.1 Preparar o ambiente
 
-O administrador executa uma rotina protegida fora do painel público. Ela cria ou reutiliza as contas de teste, garante a configuração do ativo BRLT e registra somente informações públicas necessárias para o app. Reexecutá-la não deve produzir outra emissão nem apagar registros existentes.
+O administrador executa uma rotina protegida fora do painel público. Ela cria ou reutiliza a conta emissora e a conta distribuidora/tesouraria de teste, garante a configuração do ativo BRLT e registra somente as informações públicas necessárias para o app. Reexecutá-la não deve produzir outra emissão nem apagar registros existentes.
 
 ### 6.2 Criar fatura
 
 1. O emissor conecta a carteira e assina um desafio de uso único.
 2. O emissor informa a carteira cliente, o valor e o vencimento.
-3. O sistema valida os dados, cria a fatura `pending` e apresenta o memo, o ativo, o emissor, o valor e o vencimento.
+3. O sistema valida os dados, cria a fatura `pending` e apresenta o memo, o ativo, o emissor do ativo, a conta recebedora, o valor e o vencimento.
 4. O emissor pode abrir a página de detalhes e compartilhar o identificador/link da fatura com o cliente.
 
 ### 6.3 Preparar carteira do cliente
@@ -85,7 +88,7 @@ O modo demonstração é bloqueado em mainnet, desabilitado por padrão e proteg
 
 ### 6.5 Pagar e confirmar
 
-1. O app monta a transação de pagamento com destino, ativo, valor e memo imutáveis da fatura.
+1. O app monta a transação de pagamento para a `receiver_public_key`, com destino, ativo, valor e memo imutáveis da fatura.
 2. O cliente revisa e assina a transação na própria carteira.
 3. O app apresenta que a transação está pendente e seu hash após a submissão.
 4. O cliente ou emissor solicita a verificação da fatura.
@@ -98,8 +101,8 @@ O modo demonstração é bloqueado em mainnet, desabilitado por padrão e proteg
 | --- | --- |
 | Lista do emissor | Botão para conectar carteira, criar fatura e lista de faturas próprias com estado, cliente, valor e vencimento. |
 | Nova fatura | Campos de carteira do cliente, valor BRLT e vencimento; mostra erros de validação e confirma a criação. |
-| Detalhe da fatura | Estado, valor, ativo com emissor, cliente, memo, vencimento, hash, tentativas rejeitadas com seus motivos e ação de verificar. |
-| Pagamento do cliente | Conectar carteira, checar Testnet/trustline/saldo, criar trustline, assinar pagamento e acompanhar o hash. |
+| Detalhe da fatura | Estado, valor, ativo com emissor, conta recebedora, cliente, memo, vencimento, hash, tentativas rejeitadas com seus motivos e ação de verificar. |
+| Pagamento do cliente | Conectar carteira, checar Testnet/trustline/saldo, revisar a conta recebedora, criar trustline, assinar pagamento e acompanhar o hash. |
 | Demonstração | Iniciar uma sessão Testnet, criar a carteira local, receber XLM/BRLT de teste, criar a fatura e executar o pagamento guiado. |
 
 Todos os erros precisam explicar a próxima ação: instalar/conectar carteira, trocar para Testnet, criar trustline, obter BRLT de teste, corrigir endereço/valor/vencimento ou tentar a verificação novamente.

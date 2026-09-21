@@ -22,7 +22,11 @@ export async function POST(request: Request) {
       message: body.challenge,
       signature: body.signedChallenge,
     }, stellar.issuerPublicKey, origin, createIssuerChallengeStore());
-    return NextResponse.json(await persistInvoice({ amount: body.amount, debtorPublicKey: body.debtorPublicKey, dueAt: body.dueAt }, stellar.issuerPublicKey), { status: 201 });
+    return NextResponse.json(await persistInvoice(
+      { amount: body.amount, debtorPublicKey: body.debtorPublicKey, dueAt: body.dueAt },
+      stellar.issuerPublicKey,
+      stellar.receiverPublicKey,
+    ), { status: 201 });
   } catch (error: unknown) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invoice creation failed" }, { status: 400 });
   }

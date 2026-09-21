@@ -21,7 +21,10 @@ select public.test_assert(not has_function_privilege('authenticated', 'public.co
 select public.test_assert(has_function_privilege('service_role', 'public.confirm_invoice(uuid,text,timestamptz)', 'EXECUTE'), 'service role can confirm invoices');
 select public.test_assert(not has_function_privilege('authenticated', 'public.create_wallet_challenge(uuid,text,text,timestamptz)', 'EXECUTE'), 'authenticated cannot mint wallet challenges');
 select public.test_assert(not has_function_privilege('authenticated', 'public.reserve_demo_distribution(text,uuid,timestamptz)', 'EXECUTE'), 'authenticated cannot reserve demo distributions');
-select public.test_assert(not has_function_privilege('authenticated', 'public.ensure_demo_invoice(text,text,numeric,text,timestamptz)', 'EXECUTE'), 'authenticated cannot create demo invoices');
+select public.test_assert(to_regprocedure('public.ensure_demo_invoice(text,text,numeric,text,timestamptz)') is null, 'obsolete demo invoice signature was removed');
+select public.test_assert(not has_function_privilege('anon', 'public.ensure_demo_invoice(text,text,text,numeric,text,timestamptz)', 'EXECUTE'), 'anon cannot create demo invoices');
+select public.test_assert(not has_function_privilege('authenticated', 'public.ensure_demo_invoice(text,text,text,numeric,text,timestamptz)', 'EXECUTE'), 'authenticated cannot create demo invoices');
+select public.test_assert(has_function_privilege('service_role', 'public.ensure_demo_invoice(text,text,text,numeric,text,timestamptz)', 'EXECUTE'), 'service role can create demo invoices');
 select public.test_assert(not has_function_privilege('authenticated', 'public.prepare_invoice_payment(uuid,text,text,text,timestamptz,timestamptz)', 'EXECUTE'), 'authenticated cannot prepare invoice payments');
 select public.test_assert(not has_function_privilege('authenticated', 'public.acquire_demo_distribution_lock(uuid,timestamptz)', 'EXECUTE'), 'authenticated cannot acquire the distributor lock');
 select public.test_assert((select bool_and(relrowsecurity) from pg_class where oid in (
@@ -35,18 +38,18 @@ select public.test_assert((select bool_and(relrowsecurity) from pg_class where o
 )), 'RLS is enabled on all application tables');
 
 insert into public.invoices (
-  id, debtor_public_key, issuer_public_key, asset_code, asset_issuer, amount, memo, due_at
+  id, debtor_public_key, issuer_public_key, receiver_public_key, asset_code, asset_issuer, amount, memo, due_at
 ) values
-  ('00000000-0000-4000-8000-000000000001', 'GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 10.0000000, 'invoice-one', now() + interval '1 day'),
-  ('00000000-0000-4000-8000-000000000002', 'GDDMM4RDODH6BW3AD6RSPMKHWRYQRXEFRPEOJIV7WZ6I2RXXCDUUVRKM', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 20.0000000, 'invoice-two', now() + interval '1 day'),
-  ('00000000-0000-4000-8000-000000000003', 'GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 30.0000000, 'invoice-expired', now() - interval '1 day');
+  ('00000000-0000-4000-8000-000000000001', 'GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 10.0000000, 'invoice-one', now() + interval '1 day'),
+  ('00000000-0000-4000-8000-000000000002', 'GDDMM4RDODH6BW3AD6RSPMKHWRYQRXEFRPEOJIV7WZ6I2RXXCDUUVRKM', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 20.0000000, 'invoice-two', now() + interval '1 day'),
+  ('00000000-0000-4000-8000-000000000003', 'GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 30.0000000, 'invoice-expired', now() - interval '1 day');
 
 update public.invoices set created_at = now() - interval '2 days' where id = '00000000-0000-4000-8000-000000000003';
 insert into public.invoices (
-  id, debtor_public_key, issuer_public_key, asset_code, asset_issuer, amount, memo, created_at, due_at
+  id, debtor_public_key, issuer_public_key, receiver_public_key, asset_code, asset_issuer, amount, memo, created_at, due_at
 ) values (
   '00000000-0000-4000-8000-000000000004', 'GBKMZ2CK7QANNLRLAX7BI32X7MTI7W542OLPNCZF46G2SEPWCDTEM2Q7',
-  'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT',
+  'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 'BRLT',
   'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 40.0000000,
   'invoice-paid-late', now() - interval '2 days', now() - interval '1 day'
 );
@@ -60,8 +63,8 @@ do $$
 declare uniqueness_enforced boolean := false;
 begin
   begin
-    insert into public.invoices (debtor_public_key, issuer_public_key, asset_code, asset_issuer, amount, memo, due_at)
-    values ('GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 1, 'invoice-one', now() + interval '1 day');
+    insert into public.invoices (debtor_public_key, issuer_public_key, receiver_public_key, asset_code, asset_issuer, amount, memo, due_at)
+    values ('GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 'BRLT', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 1, 'invoice-one', now() + interval '1 day');
   exception when unique_violation then uniqueness_enforced := true;
   end;
   perform public.test_assert(uniqueness_enforced, 'memo uniqueness is enforced');
@@ -189,6 +192,57 @@ select public.test_assert(
   'distribution completion is idempotent'
 );
 do $$
+declare malformed_receiver_rejected boolean := false;
+begin
+  begin
+    perform public.ensure_demo_invoice(
+      'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'not-a-stellar-account', 5.0000000, 'invalid-receiver', now() + interval '1 day'
+    );
+  exception when raise_exception then malformed_receiver_rejected := true;
+  end;
+  perform public.test_assert(malformed_receiver_rejected, 'demo invoice rejects a malformed receiver');
+end;
+$$;
+do $$
+declare debtor_issuer_rejected boolean := false;
+declare debtor_receiver_rejected boolean := false;
+declare issuer_receiver_rejected boolean := false;
+begin
+  begin
+    perform public.ensure_demo_invoice(
+      'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      5.0000000, 'equal-issuer-receiver', now() + interval '1 day'
+    );
+  exception when raise_exception then issuer_receiver_rejected := true;
+  end;
+  begin
+    perform public.ensure_demo_invoice(
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD',
+      5.0000000, 'equal-debtor-issuer', now() + interval '1 day'
+    );
+  exception when raise_exception then debtor_issuer_rejected := true;
+  end;
+  begin
+    perform public.ensure_demo_invoice(
+      'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD',
+      'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH',
+      'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD',
+      5.0000000, 'equal-debtor-receiver', now() + interval '1 day'
+    );
+  exception when raise_exception then debtor_receiver_rejected := true;
+  end;
+  perform public.test_assert(issuer_receiver_rejected, 'demo invoice rejects equal issuer and receiver accounts');
+  perform public.test_assert(debtor_issuer_rejected, 'demo invoice rejects equal debtor and issuer accounts');
+  perform public.test_assert(debtor_receiver_rejected, 'demo invoice rejects equal debtor and receiver accounts');
+end;
+$$;
+do $$
 declare confirmed_session_rejected boolean := false;
 begin
   begin
@@ -199,11 +253,12 @@ begin
 end;
 $$;
 select public.test_assert(
-  (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 5.0000000, 'demo-invoice-one', now() + interval '1 day')).id =
-  (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 5.0000000, 'ignored-retry-memo', now() + interval '1 day')).id,
+  (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 5.0000000, 'demo-invoice-one', now() + interval '1 day')).id =
+  (public.ensure_demo_invoice('GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA', 'GDTTX5V34X5BFL74VTHDU2W2555DYASROG2O23DNP3SKF3EUCK6FAHBH', 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 5.0000000, 'ignored-retry-memo', now() + interval '1 day')).id,
   'demo invoice creation is idempotent'
 );
 select public.test_assert((select count(*) from public.invoices where debtor_public_key = 'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA') = 1, 'demo wallet receives one invoice');
+select public.test_assert((select receiver_public_key from public.invoices where debtor_public_key = 'GDBZKLVO3AS7EMDDAF7TP5QLW7BPUTQXN7ECWGUYXY7HEZ7NKCB4M3GA') = 'GAUOCK3C5ZLLK6UBBGHTOCKCI7REC7B5PVRL6TFG2WH2LLOPKK4XSEZD', 'demo invoice preserves the configured receiver');
 reset role;
 
 do $$

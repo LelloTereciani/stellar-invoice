@@ -101,8 +101,8 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
               <div className="ledger-field"><span className="eyebrow">Valor exato</span><strong className="mono amount">{invoice.amount} BRLT</strong></div>
               <div className="ledger-field"><span className="eyebrow">Vencimento</span><span className="mono">{new Date(invoice.dueAt).toISOString().replace("T", " ").slice(0, 16)} UTC</span></div>
               <CopyField label="Emissor do ativo BRLT" value={invoice.assetIssuer} />
-              <CopyField label="Destino do pagamento" value={invoice.issuerPublicKey} />
-              <CopyField label="Devedor — sua carteira" value={invoice.debtorPublicKey} />
+              <CopyField label="Conta recebedora da fatura" value={invoice.receiverPublicKey} />
+              <CopyField label="Devedor — origem exata" value={invoice.debtorPublicKey} />
               <div className="ledger-field"><span className="eyebrow">Memo obrigatório</span><code className="memo">{invoice.memo}</code></div>
               <div className="ledger-field"><span className="eyebrow">Rede</span><span className="mono">Stellar Testnet</span></div>
             </div>
@@ -111,7 +111,7 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             ) : null}
             <section className="review-block">
               <p className="eyebrow">REVISÃO OBRIGATÓRIA</p>
-              <p><strong>{invoice.amount} BRLT</strong> sairá de <code>{invoice.debtorPublicKey}</code> para <code>{invoice.issuerPublicKey}</code>, com memo <code>{invoice.memo}</code>, somente na Stellar Testnet.</p>
+              <p><strong>{invoice.amount} BRLT</strong> sairá de <code>{invoice.debtorPublicKey}</code> para a conta recebedora <code>{invoice.receiverPublicKey}</code>, com o ativo emitido por <code>{invoice.assetIssuer}</code> e memo <code>{invoice.memo}</code>, somente na Stellar Testnet.</p>
             </section>
             <div className="security-note"><strong>TESTNET · SEM VALOR REAL</strong><p>A assinatura acontece na sua carteira. Nunca informe uma seed. Criar uma trustline apenas autoriza receber BRLT fictício; não é pagamento.</p></div>
             {wallet.error ? <p className="error-message" role="alert">{wallet.error}</p> : null}
