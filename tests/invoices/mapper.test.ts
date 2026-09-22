@@ -134,7 +134,7 @@ describe("invoice database mapper", () => {
       preparedPaymentXdr: null,
       viewerRole: "receiver",
     });
-    expect(result.rejectedAttempts).toBeUndefined();
+    expect("rejectedAttempts" in result).toBe(false);
     expect(database.filters).not.toContainEqual(expect.objectContaining({ table: "rejected_payment_attempts" }));
   });
 

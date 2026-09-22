@@ -37,7 +37,7 @@ export function useFreighter() {
   const [error, setError] = useState<string>();
   const [transactionHash, setTransactionHash] = useState<string>();
   const [paymentHash, setPaymentHash] = useState<string>();
-  const connectInFlight = useRef<Promise<string | undefined>>();
+  const connectInFlight = useRef<Promise<string | undefined> | undefined>(undefined);
   const attempt = useRef(0);
   const walletPublicKey = sessionState.active?.publicKey;
   const walletKind = sessionState.active?.mode;
