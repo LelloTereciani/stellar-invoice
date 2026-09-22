@@ -12,6 +12,7 @@ const invoice = {
   amount: "25.0000000",
   debtorPublicKey: "GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY",
   dueAt: "2030-01-01T00:00:00.000Z",
+  receiverPublicKey: "GAHRN27DIWCP7J3OFLE4NY7GF2FJUAWQ2MJJZQYS6JCP2QBPXBW2IB73",
 };
 
 class MemoryStore implements IssuerChallengeStore {
@@ -44,5 +45,6 @@ describe("persistent issuer challenge", () => {
     const signature = issuer.sign(Buffer.from(challenge.message)).toString("base64");
 
     await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice: { ...invoice, amount: "26.0000000" }, signature }, issuer.publicKey(), "https://invoice.example.com", store, new Date("2029-01-01T00:01:00.000Z"))).rejects.toThrow("does not match");
+    await expect(verifyAndConsumeIssuerChallenge({ ...challenge, invoice: { ...invoice, receiverPublicKey: Keypair.random().publicKey() }, signature }, issuer.publicKey(), "https://invoice.example.com", store, new Date("2029-01-01T00:01:00.000Z"))).rejects.toThrow("does not match");
   });
 });

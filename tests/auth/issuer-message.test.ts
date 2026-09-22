@@ -11,6 +11,7 @@ const invoice = {
   amount: "25.0000000",
   debtorPublicKey: "GAC7JSXMBOC5F2MOE7NT3VC3YLSQRKVS2OGF3PWLOSHX3QWPAG2RZ4OY",
   dueAt: "2030-01-01T00:00:00.000Z",
+  receiverPublicKey: "GAHRN27DIWCP7J3OFLE4NY7GF2FJUAWQ2MJJZQYS6JCP2QBPXBW2IB73",
 };
 
 describe("issuer authorization message", () => {
@@ -31,5 +32,6 @@ describe("issuer authorization message", () => {
     expect(message).toContain("action:create-invoice");
     expect(verifyIssuerMessageSignature(message, signature, issuer.publicKey())).toBe(true);
     expect(hashInvoiceAuthorizationRequest({ ...invoice, amount: "26.0000000" })).not.toBe(requestHash);
+    expect(hashInvoiceAuthorizationRequest({ ...invoice, receiverPublicKey: Keypair.random().publicKey() })).not.toBe(requestHash);
   });
 });

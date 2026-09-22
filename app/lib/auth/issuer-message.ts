@@ -1,7 +1,12 @@
+import { createHash } from "node:crypto";
+
+import { Keypair } from "@stellar/stellar-sdk";
+
 export type InvoiceAuthorizationRequest = {
   amount: string;
   debtorPublicKey: string;
   dueAt: string;
+  receiverPublicKey: string;
 };
 
 export function hashInvoiceAuthorizationRequest(request: InvoiceAuthorizationRequest): string {
@@ -11,6 +16,7 @@ export function hashInvoiceAuthorizationRequest(request: InvoiceAuthorizationReq
     amount: request.amount,
     debtorPublicKey: request.debtorPublicKey,
     dueAt: request.dueAt,
+    receiverPublicKey: request.receiverPublicKey,
   });
   return createHash("sha256").update(canonical).digest("hex");
 }
@@ -41,6 +47,3 @@ export function verifyIssuerMessageSignature(message: string, signature: string,
     return false;
   }
 }
-import { createHash } from "node:crypto";
-
-import { Keypair } from "@stellar/stellar-sdk";
