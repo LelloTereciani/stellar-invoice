@@ -5,6 +5,7 @@ import { createInvoiceDraft, type InvoiceInput } from "./validation.js";
 
 type InvoiceRow = { id: string; amount_text: string; asset_issuer: string; confirmed_transaction_hash?: string | null; created_at: string; debtor_public_key: string; due_at: string; issuer_public_key: string; memo: string; prepared_payment_expires_at?: string | null; prepared_payment_hash?: string | null; prepared_payment_xdr?: string | null; receiver_public_key: string; status: "pending" | "confirmed" | "expired" };
 type RejectedAttemptRow = { observed_at: string; reason: string; transaction_hash: string };
+export type InvoiceListRole = "payable" | "receivable";
 
 export function mapInvoiceRow(row: InvoiceRow) {
   if (typeof row.amount_text !== "string" || !/^\d+\.\d{7}$/.test(row.amount_text)) {
@@ -72,6 +73,68 @@ export async function listDebtorInvoices(debtorPublicKey: string) {
   return (data as InvoiceRow[]).map(mapInvoiceRow);
 }
 
+export async function listWalletInvoices(walletPublicKey: string, role: InvoiceListRole) {
+  const column = role === "payable" ? "debtor_public_key" : "receiver_public_key";
+  const { data, error } = await serverDatabase()
+    .from("invoices")
+    .select("*")
+    .eq(column, walletPublicKey)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error("Invoices could not be loaded");
+  return (data as InvoiceRow[]).map(mapInvoiceRow);
+}
+
+async function listRejectedAttempts(database: ReturnType<typeof serverDatabase>, id: string) {
+  const { data: attempts, error } = await database
+    .from("rejected_payment_attempts")
+    .select("transaction_hash,reason,observed_at")
+    .eq("invoice_id", id)
+    .order("observed_at", { ascending: false })
+    .limit(20);
+  if (error) throw new Error("Invoice attempts could not be loaded");
+  return ((attempts ?? []) as RejectedAttemptRow[]).map((attempt) => ({
+    observedAt: attempt.observed_at,
+    reason: attempt.reason,
+    transactionHash: attempt.transaction_hash,
+  }));
+}
+
+export async function findWalletInvoice(id: string, walletPublicKey: string) {
+  const database = serverDatabase();
+  const { data, error } = await database
+    .from("invoices")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) throw new Error("Invoice was not found");
+
+  const row = data as InvoiceRow;
+  const viewerRole = row.debtor_public_key === walletPublicKey
+    ? "debtor" as const
+    : row.receiver_public_key === walletPublicKey
+      ? "receiver" as const
+      : undefined;
+  if (!viewerRole) throw new Error("Invoice was not found");
+
+  const invoice = mapInvoiceRow(row);
+  if (viewerRole === "receiver") {
+    return {
+      ...invoice,
+      preparedPaymentExpiresAt: null,
+      preparedPaymentHash: null,
+      preparedPaymentXdr: null,
+      viewerRole,
+    };
+  }
+
+  return {
+    ...invoice,
+    rejectedAttempts: await listRejectedAttempts(database, id),
+    viewerRole,
+  };
+}
+
 export async function findDebtorInvoice(id: string, debtorPublicKey: string) {
   const database = serverDatabase();
   const { data, error } = await database
@@ -81,20 +144,9 @@ export async function findDebtorInvoice(id: string, debtorPublicKey: string) {
     .eq("debtor_public_key", debtorPublicKey)
     .maybeSingle();
   if (error || !data) throw new Error("Invoice was not found");
-  const { data: attempts, error: attemptsError } = await database
-    .from("rejected_payment_attempts")
-    .select("transaction_hash,reason,observed_at")
-    .eq("invoice_id", id)
-    .order("observed_at", { ascending: false })
-    .limit(20);
-  if (attemptsError) throw new Error("Invoice attempts could not be loaded");
   return {
     ...mapInvoiceRow(data as InvoiceRow),
-    rejectedAttempts: ((attempts ?? []) as RejectedAttemptRow[]).map((attempt) => ({
-      observedAt: attempt.observed_at,
-      reason: attempt.reason,
-      transactionHash: attempt.transaction_hash,
-    })),
+    rejectedAttempts: await listRejectedAttempts(database, id),
   };
 }
 

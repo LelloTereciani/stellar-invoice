@@ -1,4 +1,5 @@
 export type InvoiceStatus = "confirmed" | "expired" | "pending";
+export type InvoiceViewerRole = "debtor" | "receiver";
 
 export type CustomerInvoice = {
   amount: string;
@@ -16,4 +17,5 @@ export type CustomerInvoice = {
   receiverPublicKey: string;
   rejectedAttempts?: Array<{ observedAt: string; reason: string; transactionHash: string }>;
   status: InvoiceStatus;
+  viewerRole?: InvoiceViewerRole;
 };
