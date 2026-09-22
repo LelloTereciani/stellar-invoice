@@ -52,7 +52,9 @@ describe("Freighter Testnet client", () => {
       });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(authenticateFreighterWallet(walletAdapter)).resolves.toBe(walletPublicKey);
+    const onDetected = vi.fn();
+    await expect(authenticateFreighterWallet(walletAdapter, onDetected)).resolves.toBe(walletPublicKey);
+    expect(onDetected).toHaveBeenCalledWith(walletPublicKey);
     expect(walletAdapter.signMessage).toHaveBeenCalledWith(challengeMessage, {
       address: walletPublicKey,
       networkPassphrase: Networks.TESTNET,

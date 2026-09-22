@@ -55,8 +55,12 @@ export async function connectFreighterTestnet(adapter = browserFreighter): Promi
   return access.address;
 }
 
-export async function authenticateFreighterWallet(adapter = browserFreighter): Promise<string> {
+export async function authenticateFreighterWallet(
+  adapter = browserFreighter,
+  onDetected?: (walletPublicKey: string) => void,
+): Promise<string> {
   const walletPublicKey = await connectFreighterTestnet(adapter);
+  onDetected?.(walletPublicKey);
   const challengeResponse = await fetch("/api/auth/challenge", {
     body: JSON.stringify({ walletPublicKey }),
     headers: { "content-type": "application/json" },

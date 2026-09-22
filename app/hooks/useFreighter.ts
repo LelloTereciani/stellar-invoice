@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import {
   authenticateFreighterWallet,
@@ -9,6 +9,15 @@ import {
 } from "../lib/stellar/freighter-client.js";
 import type { PendingInvoice } from "../lib/stellar/transactions.js";
 import { authenticateDemoWallet, payInvoiceWithDemoWallet, readDemoWallet } from "../lib/stellar/demo-wallet-client.js";
+import {
+  clearActiveWalletMode,
+  readActiveWalletMode,
+  writeActiveWalletMode,
+} from "../lib/wallet/active-mode-client.js";
+import {
+  initialWalletSessionState,
+  reduceWalletSession,
+} from "../lib/wallet/session-state.js";
 
 export type WalletFlowStatus =
   | "idle"
@@ -23,35 +32,71 @@ export type WalletFlowStatus =
   | "error";
 
 export function useFreighter() {
-  const [walletPublicKey, setWalletPublicKey] = useState<string>();
+  const [sessionState, dispatchSession] = useReducer(reduceWalletSession, initialWalletSessionState);
   const [status, setStatus] = useState<WalletFlowStatus>("idle");
   const [error, setError] = useState<string>();
   const [transactionHash, setTransactionHash] = useState<string>();
   const [paymentHash, setPaymentHash] = useState<string>();
-  const [walletKind, setWalletKind] = useState<"demo" | "freighter">();
+  const connectInFlight = useRef<Promise<string | undefined>>();
+  const attempt = useRef(0);
+  const walletPublicKey = sessionState.active?.publicKey;
+  const walletKind = sessionState.active?.mode;
+
+  const timestamp = () => new Date().toISOString();
 
   useEffect(() => {
-    const demoWallet = readDemoWallet();
-    if (demoWallet) {
-      setWalletPublicKey(demoWallet.publicKey());
-      setWalletKind("demo");
-    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        const payload = (await response.json()) as { authenticated?: boolean; publicKey?: string };
+        const mode = readActiveWalletMode();
+        if (!cancelled && response.ok && payload.authenticated && payload.publicKey && mode) {
+          dispatchSession({ at: timestamp(), mode, publicKey: payload.publicKey, type: "session-restored" });
+          setStatus("authenticated");
+        } else if (!cancelled && (!payload.authenticated || !mode)) {
+          clearActiveWalletMode();
+        }
+      } catch {
+        if (!cancelled) setError("Não foi possível restaurar a sessão da carteira.");
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const connect = useCallback(async () => {
-    try {
-      setError(undefined);
-      setStatus("connecting");
-      const address = await authenticateFreighterWallet();
-      setWalletPublicKey(address);
-      setWalletKind("freighter");
-      setStatus("authenticated");
-      return address;
-    } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : "Wallet connection failed");
-      setStatus("error");
-      return undefined;
-    }
+    if (connectInFlight.current) return connectInFlight.current;
+    const currentAttempt = ++attempt.current;
+    const pending = (async () => {
+      try {
+        setError(undefined);
+        setStatus("connecting");
+        const address = await authenticateFreighterWallet(undefined, (detectedAddress) => {
+          dispatchSession({ at: timestamp(), publicKey: detectedAddress, type: "freighter-detected" });
+          dispatchSession({ at: timestamp(), type: "freighter-authentication-started" });
+        });
+        if (attempt.current !== currentAttempt) return undefined;
+        writeActiveWalletMode("freighter");
+        dispatchSession({ at: timestamp(), publicKey: address, type: "freighter-authenticated" });
+        setStatus("authenticated");
+        return address;
+      } catch (cause: unknown) {
+        if (attempt.current !== currentAttempt) return undefined;
+        const detail = cause instanceof Error ? cause.message : "Wallet connection failed";
+        const rejected = /denied|refused|rejeit/i.test(detail);
+        const message = rejected
+          ? "A assinatura foi recusada. A sessão anterior continua ativa."
+          : "Não foi possível ativar a Freighter. A sessão anterior continua ativa.";
+        dispatchSession({ at: timestamp(), detail, message, type: rejected ? "freighter-rejected" : "freighter-failed" });
+        setError(message);
+        setStatus("error");
+        return undefined;
+      } finally {
+        if (attempt.current === currentAttempt) connectInFlight.current = undefined;
+      }
+    })();
+    connectInFlight.current = pending;
+    return pending;
   }, []);
 
   const connectDemo = useCallback(async () => {
@@ -61,14 +106,34 @@ export function useFreighter() {
       const wallet = readDemoWallet();
       if (!wallet) throw new Error("No demo wallet exists in this browser");
       const address = await authenticateDemoWallet(wallet);
-      setWalletPublicKey(address);
-      setWalletKind("demo");
+      writeActiveWalletMode("demo");
+      dispatchSession({ at: timestamp(), publicKey: address, type: "demo-authenticated" });
       setStatus("authenticated");
       return address;
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : "Demo wallet connection failed");
       setStatus("error");
       return undefined;
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Wallet logout failed");
+      ++attempt.current;
+      connectInFlight.current = undefined;
+      clearActiveWalletMode();
+      dispatchSession({ at: timestamp(), type: "logged-out" });
+      setError(undefined);
+      setStatus("idle");
+      setPaymentHash(undefined);
+      setTransactionHash(undefined);
+      return true;
+    } catch {
+      setError("Não foi possível encerrar a sessão da carteira.");
+      setStatus("error");
+      return false;
     }
   }, []);
 
@@ -141,5 +206,17 @@ export function useFreighter() {
     }
   }, [paymentHash, walletKind, walletPublicKey]);
 
-  return { connect, connectDemo, createTrustline, error, payInvoice, status, transactionHash, walletKind, walletPublicKey };
+  return {
+    connect,
+    connectDemo,
+    createTrustline,
+    error,
+    logout,
+    payInvoice,
+    sessionState,
+    status,
+    transactionHash,
+    walletKind,
+    walletPublicKey,
+  };
 }
