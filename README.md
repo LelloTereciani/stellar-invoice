@@ -65,6 +65,17 @@ Para transacionar na Testnet, sua conta precisa de XLM para a taxa de reserva da
 3. Clique em **Pagar Fatura** e aprove a transação no Freighter.
 4. O pagamento é submetido diretamente ao ledger da Stellar e verificado pelo backend, exibindo o hash da transação pública para auditoria.
 
+### 5. Pagar com a Carteira Demo
+
+As faturas da demonstração podem ser pagas pela conta automática criada neste navegador. Essa opção é destinada somente ao fluxo de demonstração na **Stellar Testnet**:
+
+1. Inicie ou retome a demonstração explicitamente no portal. A chave demo é mantida apenas no armazenamento local do navegador e não é enviada ao servidor.
+2. Abra uma fatura pendente em que a carteira demo seja o devedor. O bloco **Ação rápida · Testnet** exibirá o botão **Pagar esta fatura com a Carteira Demo (1 clique)**.
+3. Use o botão para autenticar a carteira demo, preparar a transação, assinar localmente e enviá-la para a Testnet.
+4. O sistema verifica no ledger o hash, o valor, o emissor, o destinatário e o memo da fatura antes de marcá-la como confirmada.
+
+O botão aparece também nas faturas demo antigas enquanto elas estiverem pendentes, desde que a chave demo local corresponda exatamente ao devedor da fatura. Não é necessário informar uma seed manualmente. Se a conta demo não estiver neste navegador, retome a demonstração antes de tentar pagar. A conta Freighter continua sendo necessária para pagamentos com uma carteira pessoal; ela não compartilha nem recebe a chave demo.
+
 ## Deployment notes
 
 The repository includes Docker Compose and EasyPanel/VPS documentation. Read [docs/operations.md](docs/operations.md) and [infra/supabase/STELLAR_INVOICE.md](infra/supabase/STELLAR_INVOICE.md) before attempting a deployment.
