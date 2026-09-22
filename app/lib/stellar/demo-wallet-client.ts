@@ -101,3 +101,39 @@ export async function payInvoiceWithDemoWallet(
   if (result.hash !== expectedHash) throw new Error("Horizon returned an unexpected transaction hash");
   return result.hash;
 }
+
+export async function payInvoiceDirectlyWithDemo(
+  wallet: Keypair,
+  invoice: PendingInvoice & { id: string },
+  onStage?: (stage: "authenticating" | "preparing" | "reviewing" | "awaiting-signature" | "submitting" | "verifying" | "confirmed") => void,
+  fetcher: Fetcher = fetch,
+): Promise<string> {
+  onStage?.("authenticating");
+  await authenticateDemoWallet(wallet, fetcher);
+
+  onStage?.("preparing");
+  const paymentResponse = await fetcher(`/api/invoices/${encodeURIComponent(invoice.id)}/payment`);
+  const payload = (await paymentResponse.json()) as { error?: string; preparedTransactionHash?: string; transactionHash?: string; xdr?: string };
+  if (!paymentResponse.ok || !payload.xdr) throw new Error(payload.error || "Falha ao preparar o pagamento da fatura");
+
+  const hash = await payInvoiceWithDemoWallet({
+    invoice,
+    onStage: (stage) => onStage?.(stage),
+    wallet,
+    xdr: payload.xdr,
+  });
+
+  onStage?.("verifying");
+  const verificationResponse = await fetcher(`/api/invoices/${encodeURIComponent(invoice.id)}/verify`, {
+    body: JSON.stringify({ transactionHash: hash }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  const verification = (await verificationResponse.json()) as { error?: string; status?: string };
+  if (!verificationResponse.ok || verification.status !== "confirmed") {
+    throw new Error(verification.error || "Pagamento submetido, mas não confirmado");
+  }
+
+  onStage?.("confirmed");
+  return hash;
+}

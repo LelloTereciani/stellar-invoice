@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useFreighter, type WalletFlowStatus } from "../hooks/useFreighter.js";
 import type { CustomerInvoice } from "../lib/invoices/client-types.js";
+import { payInvoiceDirectlyWithDemo, readDemoWallet } from "../lib/stellar/demo-wallet-client.js";
 import { AppHeader } from "./AppHeader.js";
 import { ExplorerLink } from "./ExplorerLink.js";
 import { StatusBadge } from "./StatusBadge.js";
@@ -74,8 +75,45 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
     if (hash) await loadInvoice();
   }
 
+  const [demoStage, setDemoStage] = useState<string>();
+  const [isPayingDemo, setIsPayingDemo] = useState(false);
+
   const hash = invoice?.confirmedTransactionHash ?? wallet.transactionHash;
   const canPay = invoice?.status === "pending" && wallet.walletPublicKey === invoice.debtorPublicKey;
+
+  const localDemoWallet = typeof window !== "undefined" ? readDemoWallet() : undefined;
+  const canDemoPay = Boolean(
+    invoice?.status === "pending" &&
+    localDemoWallet &&
+    localDemoWallet.publicKey() === invoice.debtorPublicKey,
+  );
+
+  async function handlePayWithDemo() {
+    if (!invoice || !localDemoWallet) return;
+    setIsPayingDemo(true);
+    setDemoStage("Iniciando pagamento...");
+    try {
+      const confirmedHash = await payInvoiceDirectlyWithDemo(localDemoWallet, invoice, (stage) => {
+        const labels: Record<string, string> = {
+          authenticating: "Autenticando carteira demo no servidor...",
+          "awaiting-signature": "Assinando com a chave demo local...",
+          confirmed: "Pagamento confirmado!",
+          preparing: "Preparando transação de pagamento...",
+          reviewing: "Revisando parâmetros da transação...",
+          submitting: "Enviando pagamento para a Stellar Testnet...",
+          verifying: "Confirmando pagamento no ledger...",
+        };
+        setDemoStage(labels[stage] || stage);
+      });
+      if (confirmedHash) {
+        await loadInvoice();
+      }
+    } catch (err) {
+      setDemoStage(err instanceof Error ? err.message : "Falha ao pagar com a demo");
+    } finally {
+      setIsPayingDemo(false);
+    }
+  }
 
   return (
     <div className="app-frame">
@@ -123,7 +161,29 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 <button className="button button--primary" disabled={!canPay || !["authenticated", "confirmed", "idle", "error"].includes(wallet.status)} type="button" onClick={pay}>Revisar e assinar pagamento →</button>
               </div>
             ) : null}
-            {invoice.viewerRole === "receiver" ? <p className="flow-status">Esta carteira é a recebedora. A fatura está disponível somente para consulta; o pagamento pertence ao devedor.</p> : null}
+            {invoice.viewerRole === "receiver" ? (
+              <div className="receiver-notice">
+                <p className="flow-status">Esta carteira é a recebedora. A fatura está disponível para acompanhamento da liquidação.</p>
+                {canDemoPay ? (
+                  <div className="demo-callout" style={{ marginTop: "20px" }}>
+                    <p className="kicker">AÇÃO RÁPIDA · TESTNET</p>
+                    <h3>Carteira Devedora detectada neste navegador</h3>
+                    <p>
+                      A chave devedora desta fatura (<code>{invoice.debtorPublicKey}</code>) é a sua carteira demo local. Você pode assinar e transferir os <strong>{invoice.amount} BRLT</strong> agora com 1 clique.
+                    </p>
+                    <button
+                      className="button button--primary"
+                      type="button"
+                      onClick={handlePayWithDemo}
+                      disabled={isPayingDemo}
+                    >
+                      {isPayingDemo ? (demoStage || "Processando pagamento...") : "⚡ Pagar esta fatura com a Carteira Demo (1 clique)"}
+                    </button>
+                    {demoStage && !isPayingDemo ? <p className="mono" style={{ fontSize: "12px", marginTop: "10px" }}>{demoStage}</p> : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </article>
         ) : null}
       </main>
