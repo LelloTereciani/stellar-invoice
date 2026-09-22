@@ -161,27 +161,27 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 <button className="button button--primary" disabled={!canPay || !["authenticated", "confirmed", "idle", "error"].includes(wallet.status)} type="button" onClick={pay}>Revisar e assinar pagamento →</button>
               </div>
             ) : null}
+            {canDemoPay ? (
+              <div className="demo-callout" style={{ marginTop: "20px" }}>
+                <p className="kicker">AÇÃO RÁPIDA · TESTNET</p>
+                <h3>Carteira Devedora detectada neste navegador</h3>
+                <p>
+                  A chave devedora desta fatura (<code>{invoice.debtorPublicKey}</code>) é a sua carteira demo local. Você pode assinar e transferir os <strong>{invoice.amount} BRLT</strong> agora com 1 clique.
+                </p>
+                <button
+                  className="button button--primary"
+                  type="button"
+                  onClick={handlePayWithDemo}
+                  disabled={isPayingDemo}
+                >
+                  {isPayingDemo ? (demoStage || "Processando pagamento...") : "⚡ Pagar esta fatura com a Carteira Demo (1 clique)"}
+                </button>
+                {demoStage && !isPayingDemo ? <p className="mono" style={{ fontSize: "12px", marginTop: "10px" }}>{demoStage}</p> : null}
+              </div>
+            ) : null}
             {invoice.viewerRole === "receiver" ? (
               <div className="receiver-notice">
                 <p className="flow-status">Esta carteira é a recebedora. A fatura está disponível para acompanhamento da liquidação.</p>
-                {canDemoPay ? (
-                  <div className="demo-callout" style={{ marginTop: "20px" }}>
-                    <p className="kicker">AÇÃO RÁPIDA · TESTNET</p>
-                    <h3>Carteira Devedora detectada neste navegador</h3>
-                    <p>
-                      A chave devedora desta fatura (<code>{invoice.debtorPublicKey}</code>) é a sua carteira demo local. Você pode assinar e transferir os <strong>{invoice.amount} BRLT</strong> agora com 1 clique.
-                    </p>
-                    <button
-                      className="button button--primary"
-                      type="button"
-                      onClick={handlePayWithDemo}
-                      disabled={isPayingDemo}
-                    >
-                      {isPayingDemo ? (demoStage || "Processando pagamento...") : "⚡ Pagar esta fatura com a Carteira Demo (1 clique)"}
-                    </button>
-                    {demoStage && !isPayingDemo ? <p className="mono" style={{ fontSize: "12px", marginTop: "10px" }}>{demoStage}</p> : null}
-                  </div>
-                ) : null}
               </div>
             ) : null}
           </article>
