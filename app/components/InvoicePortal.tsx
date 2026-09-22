@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useFreighter } from "../hooks/useFreighter.js";
 import type { CustomerInvoice } from "../lib/invoices/client-types.js";
 import { AppHeader } from "./AppHeader.js";
+import { CreateInvoiceModal } from "./CreateInvoiceModal.js";
 import { DemoStarter } from "./DemoStarter.js";
 import { InvoiceList } from "./InvoiceList.js";
 import { WalletStatusPanel, type WalletStatusSummary } from "./WalletStatusPanel.js";
@@ -15,6 +16,7 @@ export function InvoicePortal() {
   const [role, setRole] = useState<"payable" | "receivable">("payable");
   const [summary, setSummary] = useState<WalletStatusSummary>();
   const [message, setMessage] = useState("Conecte a carteira devedora ou inicie a demonstração automática.");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const loadInvoices = useCallback(async (selectedRole: "payable" | "receivable" = role) => {
     const response = await fetch(`/api/invoices?role=${selectedRole}`);
@@ -55,6 +57,13 @@ export function InvoicePortal() {
     setRole(nextRole);
   }
 
+  async function handleInvoiceCreated(created: { id: string; memo: string; receiver_public_key: string }) {
+    const nextRole = created.receiver_public_key === wallet.walletPublicKey ? "receivable" : "payable";
+    setRole(nextRole);
+    await loadInvoices(nextRole);
+    setMessage(`Fatura ${created.memo} criada com sucesso!`);
+  }
+
   return (
     <div className="app-frame">
       <AppHeader onConnect={connect} onLogout={wallet.logout} walletKind={wallet.walletKind} walletPublicKey={wallet.walletPublicKey} />
@@ -62,7 +71,24 @@ export function InvoicePortal() {
       <main className="shell workspace">
         <section className="workspace__list">
           <WalletStatusPanel session={wallet.sessionState} summary={summary} />
-          <div className="section-heading"><div><p className="kicker">CARTEIRA DEVEDORA</p><h2>Suas faturas</h2></div><span className="count">{invoices.length.toString().padStart(2, "0")}</span></div>
+          <div className="section-heading">
+            <div>
+              <p className="kicker">{role === "payable" ? "CARTEIRA DEVEDORA" : "CARTEIRA RECEBEDORA"}</p>
+              <h2>Suas faturas</h2>
+            </div>
+            <div className="section-actions">
+              {wallet.walletPublicKey ? (
+                <button
+                  className="btn-new-invoice"
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  + Nova fatura
+                </button>
+              ) : null}
+              <span className="count">{invoices.length.toString().padStart(2, "0")}</span>
+            </div>
+          </div>
           <div className="role-tabs" aria-label="Papel da carteira"><button aria-pressed={role === "payable"} type="button" onClick={() => selectRole("payable")}>A pagar</button><button aria-pressed={role === "receivable"} type="button" onClick={() => selectRole("receivable")}>A receber</button></div>
           <p className="section-message" aria-live="polite">{wallet.error || message}</p>
           <InvoiceList invoices={invoices} />
@@ -74,6 +100,14 @@ export function InvoicePortal() {
           <div className="testnet-stamp"><span>TESTNET</span><strong>BRLT FICTÍCIO</strong><small>SEM VALOR REAL</small></div>
         </section>
       </main>
+      {wallet.walletPublicKey ? (
+        <CreateInvoiceModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          walletPublicKey={wallet.walletPublicKey}
+          onInvoiceCreated={handleInvoiceCreated}
+        />
+      ) : null}
     </div>
   );
 }
