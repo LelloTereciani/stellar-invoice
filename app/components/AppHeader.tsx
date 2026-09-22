@@ -2,6 +2,8 @@
 
 type AppHeaderProps = {
   onConnect: () => void;
+  onLogout?: () => void;
+  walletKind?: "demo" | "freighter";
   walletPublicKey?: string;
 };
 
@@ -9,7 +11,7 @@ function shortAddress(address: string): string {
   return `${address.slice(0, 5)}…${address.slice(-4)}`;
 }
 
-export function AppHeader({ onConnect, walletPublicKey }: AppHeaderProps) {
+export function AppHeader({ onConnect, onLogout, walletKind, walletPublicKey }: AppHeaderProps) {
   return (
     <header className="topbar">
       <div className="topbar__inner">
@@ -25,8 +27,9 @@ export function AppHeader({ onConnect, walletPublicKey }: AppHeaderProps) {
         <span className="network-badge"><span aria-hidden="true" />TESTNET · BRLT FICTÍCIO</span>
         <button className="button button--secondary wallet-button" type="button" onClick={onConnect}>
           <span aria-hidden="true">◈</span>
-          <span className="mono">{walletPublicKey ? shortAddress(walletPublicKey) : "Conectar carteira"}</span>
+          <span className="mono">{walletPublicKey ? `${walletKind === "demo" ? "Demo" : "Freighter"} · ${shortAddress(walletPublicKey)}` : "Conectar carteira"}</span>
         </button>
+        {walletPublicKey && onLogout ? <button className="text-button" type="button" onClick={onLogout}>Sair</button> : null}
       </div>
     </header>
   );

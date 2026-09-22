@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { buildDemoClaimMessage } from "../lib/demo/claim-message.js";
 import { authenticateDemoWallet, getOrCreateDemoWallet, readDemoWallet, resumeDemoWallet } from "../lib/stellar/demo-wallet-client.js";
 import { reviewTrustlineXdr } from "../lib/stellar/transactions.js";
+import { writeActiveWalletMode } from "../lib/wallet/active-mode-client.js";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 
@@ -41,6 +42,7 @@ export function DemoStarter() {
         setMessage("Autenticando a carteira demo e recuperando sua fatura...");
         const invoiceId = await resumeDemoWallet(existingWallet);
         if (invoiceId) {
+          writeActiveWalletMode("demo");
           window.location.assign(`/invoices/${encodeURIComponent(invoiceId)}`);
           return;
         }
@@ -76,6 +78,7 @@ export function DemoStarter() {
       if (!distribution.ok) throw new Error(result.error ?? "Não foi possível receber BRLT de demonstração");
       setMessage("Autenticando sua carteira descartável...");
       await authenticateDemoWallet(wallet);
+      writeActiveWalletMode("demo");
       setMessage(`Demonstração pronta: ${result.amount} BRLT fictícios foram enviados à sua carteira Testnet.`);
       if (result.invoiceId) window.location.assign(`/invoices/${encodeURIComponent(result.invoiceId)}`);
     } catch (error: unknown) {

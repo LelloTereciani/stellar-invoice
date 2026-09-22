@@ -79,7 +79,7 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
   return (
     <div className="app-frame">
-      <AppHeader onConnect={connectAndLoad} walletPublicKey={wallet.walletPublicKey} />
+      <AppHeader onConnect={connectAndLoad} onLogout={wallet.logout} walletKind={wallet.walletKind} walletPublicKey={wallet.walletPublicKey} />
       <section className="intro-band">
         <div className="shell"><p className="kicker">FATURA · VERIFICAÇÃO ON-CHAIN</p><h1>Revise antes de assinar</h1><p>O histórico na rede Stellar é a fonte da verdade. A aplicação não guarda sua chave e nunca inicia o pagamento no servidor.</p></div>
       </section>
@@ -117,12 +117,13 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             {wallet.error ? <p className="error-message" role="alert">{wallet.error}</p> : null}
             {FLOW_LABELS[wallet.status] ? <p className="flow-status" aria-live="polite">{FLOW_LABELS[wallet.status]}</p> : null}
             {hash ? <div className="confirmation"><strong>Hash da transação</strong><code>{hash}</code><ExplorerLink transactionHash={hash} /></div> : null}
-            {invoice.status === "pending" ? (
+            {invoice.status === "pending" && invoice.viewerRole !== "receiver" ? (
               <div className="action-row">
                 {wallet.walletKind === "freighter" ? <button className="button button--secondary" type="button" onClick={wallet.createTrustline}>Estabelecer trustline</button> : null}
                 <button className="button button--primary" disabled={!canPay || !["authenticated", "confirmed", "idle", "error"].includes(wallet.status)} type="button" onClick={pay}>Revisar e assinar pagamento →</button>
               </div>
             ) : null}
+            {invoice.viewerRole === "receiver" ? <p className="flow-status">Esta carteira é a recebedora. A fatura está disponível somente para consulta; o pagamento pertence ao devedor.</p> : null}
           </article>
         ) : null}
       </main>

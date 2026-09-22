@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { Account, Asset, Keypair, Memo, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
 
 const DEMO_STORAGE_KEY = "stellar-invoice-demo-customer-secret";
+const ACTIVE_MODE_STORAGE_KEY = "stellar-invoice-active-wallet-mode";
 
 test("renders the Testnet portal without horizontal overflow on desktop and mobile", async ({ page }) => {
   await page.goto("/");
@@ -38,6 +39,10 @@ test("resumes an existing browser demo wallet without requesting another BRLT al
   });
   await page.route(/\/api\/auth\/verify$/, async (route) => route.fulfill({
     body: JSON.stringify({ authenticated: true, walletPublicKey: wallet.publicKey() }),
+    contentType: "application/json",
+  }));
+  await page.route(/\/api\/auth\/session$/, async (route) => route.fulfill({
+    body: JSON.stringify({ authenticated: true, publicKey: wallet.publicKey() }),
     contentType: "application/json",
   }));
   await page.route(/\/api\/demo\/resume$/, async (route) => route.fulfill({
@@ -175,7 +180,14 @@ test("reviews and signs the exact demo invoice in the browser before verificatio
   let horizonSubmissions = 0;
   let paymentPreparations = 0;
 
-  await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), { key: DEMO_STORAGE_KEY, secret: wallet.secret() });
+  await page.addInitScript(({ modeKey, secretKey, secret }) => {
+    localStorage.setItem(secretKey, secret);
+    localStorage.setItem(modeKey, "demo");
+  }, { modeKey: ACTIVE_MODE_STORAGE_KEY, secretKey: DEMO_STORAGE_KEY, secret: wallet.secret() });
+  await page.route(/\/api\/auth\/session$/, async (route) => route.fulfill({
+    body: JSON.stringify({ authenticated: true, publicKey: wallet.publicKey() }),
+    contentType: "application/json",
+  }));
   await page.route(/\/api\/invoices\/demo-invoice$/, async (route) => route.fulfill({ body: JSON.stringify(invoice), contentType: "application/json" }));
   await page.route(/\/api\/invoices\/demo-invoice\/payment$/, async (route) => {
     paymentPreparations += 1;
@@ -250,7 +262,14 @@ test("retries a transient verification failure without submitting a second payme
   let paymentPreparations = 0;
   let verificationAttempts = 0;
 
-  await page.addInitScript(({ key, secret }) => localStorage.setItem(key, secret), { key: DEMO_STORAGE_KEY, secret: wallet.secret() });
+  await page.addInitScript(({ modeKey, secretKey, secret }) => {
+    localStorage.setItem(secretKey, secret);
+    localStorage.setItem(modeKey, "demo");
+  }, { modeKey: ACTIVE_MODE_STORAGE_KEY, secretKey: DEMO_STORAGE_KEY, secret: wallet.secret() });
+  await page.route(/\/api\/auth\/session$/, async (route) => route.fulfill({
+    body: JSON.stringify({ authenticated: true, publicKey: wallet.publicKey() }),
+    contentType: "application/json",
+  }));
   await page.route(/\/api\/invoices\/retry-invoice$/, async (route) => route.fulfill({ body: JSON.stringify(invoice), contentType: "application/json" }));
   await page.route(/\/api\/invoices\/retry-invoice\/payment$/, async (route) => {
     paymentPreparations += 1;
